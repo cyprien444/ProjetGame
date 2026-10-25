@@ -83,6 +83,8 @@ namespace ProjetGame.Moteur
                                          uint graine, int niveauReliques,
                                          bool cibleLePremier = true, bool avecJournal = false)
         {
+            if (!Donnees.Charge)
+                throw new Exception("Les données ne sont pas chargées : appelle d'abord ChargeurDonnees.Charger() (ou Donnees.Charger).");
             var rng = new Mulberry32(graine);
             var unites = new List<Unite>();
             for (int i = 0; i < equipeA.Length; i++) unites.Add(CreerUnite("A", equipeA[i], i, niveauReliques));
@@ -132,9 +134,14 @@ namespace ProjetGame.Moteur
                         if (u.Recharges[j] == 0 && (!cj.EstSoin || blesse)) { k = j; break; }
                     }
                     Competence s = u.Competences[k];
+                    int[] rechargesAvant = avecJournal ? (int[])u.Recharges.Clone() : null;
                     u.Recharges[k] = s.Recharge;
 
-                    var ev = new Evenement { Type = "Action", Round = round, Equipe = u.Equipe, Acteur = u.Nom, Competence = s.Nom, EstSoin = s.EstSoin };
+                    var ev = new Evenement
+                    {
+                        Type = "Action", Round = round, Equipe = u.Equipe, Acteur = u.Nom, ActeurPosition = u.Position,
+                        IndexCompetence = k, RechargesAvant = rechargesAvant, Competence = s.Nom, EstSoin = s.EstSoin
+                    };
 
                     if (s.EstSoin)
                     {
@@ -154,7 +161,7 @@ namespace ProjetGame.Moteur
                         {
                             int h = (int)Math.Min(m.Max - m.Pv, Math.Floor(u.Max * (double)s.Puissance * (100 + u.Soin) / 10000));
                             m.Pv += h;
-                            ev.Cibles.Add(new EffetCible { Nom = m.Nom, Valeur = h });
+                            ev.Cibles.Add(new EffetCible { Nom = m.Nom, Valeur = h, Equipe = m.Equipe, Position = m.Position, PvApres = m.Pv });
                         }
                     }
                     else
@@ -184,7 +191,7 @@ namespace ProjetGame.Moteur
                                 total += d;
                                 if (critique) crits++;
                             }
-                            ev.Cibles.Add(new EffetCible { Nom = m.Nom, Valeur = total, Critiques = crits, Mort = m.Pv == 0 });
+                            ev.Cibles.Add(new EffetCible { Nom = m.Nom, Valeur = total, Critiques = crits, Mort = m.Pv == 0, Equipe = m.Equipe, Position = m.Position, PvApres = m.Pv });
                         }
                     }
                     if (avecJournal) journal.Add(ev);

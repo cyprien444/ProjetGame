@@ -1,0 +1,25 @@
+{
+  "valeurs": {
+    "atqFixe": [10, 50],
+    "defFixe": [6, 30],
+    "pvFixe": [100, 300],
+    "atqPct": [8, 40],
+    "defPct": [8, 35],
+    "pvPct": [8, 25],
+    "spd": [2, 10],
+    "crit": [4, 20],
+    "degCrit": [6, 40]
+  },
+  "builds": {
+    "Tank": {"principaux": ["pv", "def", "pv"], "sets": ["Basalte", "Plume", "Basalte"]},
+    "DPS": {"principaux": ["atq", "dcrit", "atq"], "sets": ["Braise", "Encre", "Braise"]},
+    "Support": {"principaux": ["spd", "atq", "pv"], "sets": ["Braise", "Basalte", "Braise"]},
+    "Soigneur": {"principaux": ["pv", "pv", "pv"], "sets": ["Basalte", "Plume", "Basalte"]}
+  },
+  "sets": {
+    "Braise": {"genre": "atqPct", "valeur": 15},
+    "Basalte": {"genre": "pvPct", "valeur": 10},
+    "Plume": {"genre": "defPct", "valeur": 10},
+    "Encre": {"genre": "degCrit", "valeur": 30}
+  }
+}

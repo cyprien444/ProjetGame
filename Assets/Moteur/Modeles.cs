@@ -83,6 +83,9 @@ namespace ProjetGame.Moteur
         public int Valeur;         // dégâts ou soin
         public int Critiques;
         public bool Mort;
+        public string Equipe;      // équipe de la cible ("A" ou "B")
+        public int Position;       // position de la cible (0 à 4)
+        public int PvApres;        // PV de la cible après l'action
     }
 
     // Un événement du combat. Le client rejouera cette liste en animation.
@@ -92,6 +95,9 @@ namespace ProjetGame.Moteur
         public int Round;
         public string Equipe;
         public string Acteur;
+        public int ActeurPosition;     // position (0 à 4) de celui qui joue
+        public int IndexCompetence;    // 0, 1 ou 2 : la compétence utilisée
+        public int[] RechargesAvant;   // recharges de ses compétences juste avant l'action
         public string Competence;
         public bool EstSoin;
         public string Texte;

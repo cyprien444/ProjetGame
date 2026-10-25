@@ -6,6 +6,8 @@ public class TestMoteur : MonoBehaviour
 {
     void Start()
     {
+        ChargeurDonnees.Charger();
+
         // Les équipes sont des numéros de persos (index dans Donnees.Persos, le numéro 1 du doc est le 0).
         int[] equipeA = { 12, 0, 9, 10, 11 };   // Valdis, Garrick, Ren, Aurélien, Naïa
         int[] equipeB = { 8, 4, 5, 13, 7 };     // Isaure, Hakon, Kenzo, Vesper, Anselm

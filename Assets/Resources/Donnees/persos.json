@@ -1,0 +1,153 @@
+{
+  "base": {"Tank": [1800, 120, 130], "DPS": [1000, 220, 60], "Support": [1200, 140, 80], "Soigneur": [1300, 100, 80]},
+  "multRarete": {"Commun": 100, "Atypique": 115, "Rare": 130, "Épique": 150, "Légendaire": 175},
+  "persos": [
+    {
+      "nom": "Garrick", "role": "Tank", "rarete": "Commun", "spd": 25, "crit": 5,
+      "competences": [
+        {"nom": "Coup de bouclier", "puissance": 100, "coups": 1, "recharge": 0, "type": "1"},
+        {"nom": "Porte close", "puissance": 140, "coups": 1, "recharge": 3, "type": "1"},
+        {"nom": "Cri du rempart", "puissance": 80, "coups": 1, "recharge": 5, "type": "A"}
+      ],
+      "meneur": null,
+      "statsFixes": null
+    },
+    {
+      "nom": "Tamsin", "role": "DPS", "rarete": "Commun", "spd": 53, "crit": 32,
+      "competences": [
+        {"nom": "Flèche des marais", "puissance": 100, "coups": 1, "recharge": 0, "type": "1"},
+        {"nom": "Triple tir", "puissance": 65, "coups": 3, "recharge": 3, "type": "1"}
+      ],
+      "meneur": null,
+      "statsFixes": null
+    },
+    {
+      "nom": "Pip", "role": "Support", "rarete": "Commun", "spd": 49, "crit": 12,
+      "competences": [
+        {"nom": "Note aiguë", "puissance": 100, "coups": 1, "recharge": 0, "type": "1"},
+        {"nom": "Refrain entêtant", "puissance": 130, "coups": 1, "recharge": 3, "type": "1"}
+      ],
+      "meneur": null,
+      "statsFixes": null
+    },
+    {
+      "nom": "Maëlle", "role": "Soigneur", "rarete": "Commun", "spd": 39, "crit": 5,
+      "competences": [
+        {"nom": "Coup de louche", "puissance": 100, "coups": 1, "recharge": 0, "type": "1"},
+        {"nom": "Cataplasme", "puissance": 25, "coups": 1, "recharge": 3, "type": "H1"}
+      ],
+      "meneur": null,
+      "statsFixes": null
+    },
+    {
+      "nom": "Hakon", "role": "Tank", "rarete": "Atypique", "spd": 31, "crit": 12,
+      "competences": [
+        {"nom": "Coup de coque", "puissance": 100, "coups": 1, "recharge": 0, "type": "1"},
+        {"nom": "Abordage", "puissance": 150, "coups": 1, "recharge": 4, "type": "1"},
+        {"nom": "Vague de bord", "puissance": 85, "coups": 1, "recharge": 5, "type": "A"}
+      ],
+      "meneur": {"genre": "spd", "valeur": 10, "texte": "Équipage soudé : +10 % SPD"},
+      "statsFixes": null
+    },
+    {
+      "nom": "Kenzo", "role": "DPS", "rarete": "Atypique", "spd": 51, "crit": 28,
+      "competences": [
+        {"nom": "Coupe-vent", "puissance": 100, "coups": 1, "recharge": 0, "type": "1"},
+        {"nom": "Double lame", "puissance": 95, "coups": 2, "recharge": 3, "type": "1"},
+        {"nom": "Danse des lames", "puissance": 105, "coups": 1, "recharge": 5, "type": "A"}
+      ],
+      "meneur": null,
+      "statsFixes": null
+    },
+    {
+      "nom": "Zora", "role": "Support", "rarete": "Atypique", "spd": 47, "crit": 22,
+      "competences": [
+        {"nom": "Fiole vive", "puissance": 100, "coups": 1, "recharge": 0, "type": "1"},
+        {"nom": "Flacon explosif", "puissance": 140, "coups": 1, "recharge": 3, "type": "1"},
+        {"nom": "Brouillard acide", "puissance": 85, "coups": 1, "recharge": 4, "type": "A"}
+      ],
+      "meneur": null,
+      "statsFixes": null
+    },
+    {
+      "nom": "Anselm", "role": "Soigneur", "rarete": "Atypique", "spd": 36, "crit": 5,
+      "competences": [
+        {"nom": "Coup de bâton", "puissance": 100, "coups": 1, "recharge": 0, "type": "1"},
+        {"nom": "Tisane apaisante", "puissance": 25, "coups": 1, "recharge": 3, "type": "H1"},
+        {"nom": "Jardin du monastère", "puissance": 18, "coups": 1, "recharge": 6, "type": "HA"}
+      ],
+      "meneur": null,
+      "statsFixes": null
+    },
+    {
+      "nom": "Isaure", "role": "Tank", "rarete": "Rare", "spd": 28, "crit": 8,
+      "competences": [
+        {"nom": "Estoc", "puissance": 100, "coups": 1, "recharge": 0, "type": "1"},
+        {"nom": "Charge du Rempart", "puissance": 140, "coups": 1, "recharge": 3, "type": "1"},
+        {"nom": "Bastion", "puissance": 75, "coups": 1, "recharge": 4, "type": "A"}
+      ],
+      "meneur": {"genre": "def", "valeur": 25, "texte": "Rempart blanc : +25 % DEF"},
+      "statsFixes": null
+    },
+    {
+      "nom": "Ren", "role": "DPS", "rarete": "Rare", "spd": 54, "crit": 33,
+      "competences": [
+        {"nom": "Lame courte", "puissance": 100, "coups": 1, "recharge": 0, "type": "1"},
+        {"nom": "Coup dans le dos", "puissance": 190, "coups": 1, "recharge": 4, "type": "1"},
+        {"nom": "Pluie de lames", "puissance": 105, "coups": 1, "recharge": 5, "type": "A"}
+      ],
+      "meneur": null,
+      "statsFixes": [1160, 158, 78]
+    },
+    {
+      "nom": "Aurélien", "role": "Support", "rarete": "Rare", "spd": 45, "crit": 10,
+      "competences": [
+        {"nom": "Coup de hampe", "puissance": 100, "coups": 1, "recharge": 0, "type": "1"},
+        {"nom": "Bannière tranchante", "puissance": 130, "coups": 1, "recharge": 3, "type": "1"},
+        {"nom": "Charge des couleurs", "puissance": 90, "coups": 1, "recharge": 4, "type": "A"}
+      ],
+      "meneur": {"genre": "atq", "valeur": 20, "texte": "Bannière dorée : +20 % ATQ"},
+      "statsFixes": null
+    },
+    {
+      "nom": "Naïa", "role": "Soigneur", "rarete": "Rare", "spd": 42, "crit": 10,
+      "competences": [
+        {"nom": "Éclat de source", "puissance": 100, "coups": 1, "recharge": 0, "type": "1"},
+        {"nom": "Goutte claire", "puissance": 28, "coups": 1, "recharge": 3, "type": "H1"},
+        {"nom": "Marée de visions", "puissance": 15, "coups": 1, "recharge": 4, "type": "HA"}
+      ],
+      "meneur": {"genre": "heal", "valeur": 30, "texte": "Visions des sources : +30 % de soin"},
+      "statsFixes": null
+    },
+    {
+      "nom": "Valdis", "role": "Tank", "rarete": "Épique", "spd": 33, "crit": 15,
+      "competences": [
+        {"nom": "Poing enchaîné", "puissance": 100, "coups": 1, "recharge": 0, "type": "1"},
+        {"nom": "Chaînes brisées", "puissance": 160, "coups": 1, "recharge": 3, "type": "1"},
+        {"nom": "Rugissement de l’arène", "puissance": 90, "coups": 1, "recharge": 5, "type": "A"}
+      ],
+      "meneur": {"genre": "pv", "valeur": 30, "texte": "Champion de l’arène : +30 % PV max"},
+      "statsFixes": null
+    },
+    {
+      "nom": "Vesper", "role": "Support", "rarete": "Épique", "spd": 55, "crit": 18,
+      "competences": [
+        {"nom": "Plume acérée", "puissance": 100, "coups": 1, "recharge": 0, "type": "1"},
+        {"nom": "Ordre de feu", "puissance": 135, "coups": 1, "recharge": 3, "type": "1"},
+        {"nom": "Plan de bataille", "puissance": 95, "coups": 1, "recharge": 4, "type": "A"}
+      ],
+      "meneur": {"genre": "atqdps", "valeur": 40, "texte": "Stratège : +40 % ATQ aux DPS"},
+      "statsFixes": null
+    },
+    {
+      "nom": "Valen", "role": "DPS", "rarete": "Légendaire", "spd": 60, "crit": 40,
+      "competences": [
+        {"nom": "Lame sans ombre", "puissance": 100, "coups": 1, "recharge": 0, "type": "1"},
+        {"nom": "Fente fantôme", "puissance": 200, "coups": 1, "recharge": 3, "type": "1"},
+        {"nom": "Éclipse", "puissance": 120, "coups": 1, "recharge": 5, "type": "A"}
+      ],
+      "meneur": {"genre": "crit", "valeur": 15, "texte": "Premier réveillé : +15 points de critique"},
+      "statsFixes": [1230, 290, 98]
+    }
+  ]
+}
