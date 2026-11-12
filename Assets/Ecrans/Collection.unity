@@ -396,7 +396,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0.0003331264}
   m_SizeDelta: {x: 0, y: 300}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &869693641
@@ -1185,16 +1185,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GestionCollection
   prefabCarte: {fileID: 6296901202295447879, guid: c82169a58c350174aaca9e95de34ba2b, type: 3}
   contenuGrille: {fileID: 869693640}
-  personnagesPossedes:
-  - nom: Garrick
-    role: Tank
-    rarete: Commun
-  - nom: Tamsin
-    role: "D\xE9g\xE2ts"
-    rarete: Commun
-  - nom: Pip
-    role: Support
-    rarete: Commun
+  personnagesPossedes: 000000000000000000000000
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
