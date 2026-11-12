@@ -8,9 +8,6 @@ public class GestionCollection : MonoBehaviour
     [SerializeField] private CartePersonnageUI prefabCarte;
     [SerializeField] private Transform contenuGrille;
 
-    [Header("Personnages possedes (indices du JSON)")]
-    [SerializeField] private int[] personnagesPossedes = { 0, 1, 2 };
-
     private void Start()
     {
         // Charger les donnees des personnages et des reliques
@@ -46,7 +43,7 @@ public class GestionCollection : MonoBehaviour
         }
 
         // Creer une carte par personnage possede
-        foreach (int index in personnagesPossedes)
+        foreach (int index in DonneesJoueur.PersonnagesPossedes)
         {
             if (index < 0 || index >= Donnees.Persos.Length)
             {
