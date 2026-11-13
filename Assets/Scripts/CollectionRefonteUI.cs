@@ -22,7 +22,7 @@ public class CollectionRefonteUI : MonoBehaviour
     private static readonly Color Card = new Color(0.075f, 0.12f, 0.21f, 0.95f);
 
     private Mode mode = Mode.Personnelle;
-    private Onglet onglet = Onglet.Runes;
+    private Onglet onglet = Onglet.Equipements;
     private int indexSelectionne = -1;
     private RectTransform racine;
     private ScrollRect listePortraits;
@@ -185,8 +185,13 @@ public class CollectionRefonteUI : MonoBehaviour
         if (index < 0 || index >= Donnees.Persos.Length) return;
         RetenirDefilement();
         indexSelectionne = index;
-        if (mode == Mode.Galerie) mode = Mode.FicheEncyclopedie;
-        onglet = mode == Mode.Personnelle ? Onglet.Runes : Onglet.Infos;
+        // Conserver l'onglet actif lorsque l'on change de personnage.
+        // Depuis la galerie de l'encyclopedie, ouvrir la nouvelle fiche sur INFOS.
+        if (mode == Mode.Galerie)
+        {
+            mode = Mode.FicheEncyclopedie;
+            onglet = Onglet.Infos;
+        }
         Construire();
     }
 
@@ -194,7 +199,7 @@ public class CollectionRefonteUI : MonoBehaviour
     {
         RetenirDefilement();
         mode = Mode.Personnelle;
-        onglet = Onglet.Runes;
+        onglet = Onglet.Equipements;
         var possedes = ListePossedee();
         if (!possedes.Contains(indexSelectionne))
             indexSelectionne = possedes.Count > 0 ? possedes[0] : -1;
@@ -342,12 +347,12 @@ public class CollectionRefonteUI : MonoBehaviour
         Tab(tabs,"RUNES",Onglet.Runes,.753f,1f);
 
         var panneau = Panneau("Contenu", racine, .187f, .069f, .984f, .542f);
-        if (onglet == Onglet.Runes) VueRunes(panneau, perso);
+        if (onglet == Onglet.Equipements) VueEquipements(panneau, perso);
         else if (onglet == Onglet.Infos) VueInfos(panneau, perso);
         else if (onglet == Onglet.Competences) VueCompetences(panneau,perso);
-        else VueEquipements(panneau);
+        else VueRunes(panneau);
         texteInfo = Texte("BasMessage", racine,
-            "Prototype : Reliques et progression réelles développées aux étapes 8 et 10.",
+            "Prototype : emplacements visibles dans ÉQUIPEMENTS ; système de Reliques à l'étape 10.",
             20, TexteSecondaire, .19f, .016f, .982f, .062f);
     }
 
@@ -357,9 +362,9 @@ public class CollectionRefonteUI : MonoBehaviour
             x1, .05f, x2, .97f, onglet == cible, 22);
     }
 
-    private void VueRunes(RectTransform zone, Perso perso)
+    private void VueEquipements(RectTransform zone, Perso perso)
     {
-        Texte("TitreRunes", zone, "MES 6 EMPLACEMENTS DE RELIQUES", 28, Or,
+        Texte("TitreEquipements", zone, "MES 6 EMPLACEMENTS DE RELIQUES", 28, Or,
             .025f, .914f, .585f, .99f, TextAlignmentOptions.MidlineLeft);
         var emplacement = Zone("PanneauSixCases", zone, .023f, .205f, .598f, .895f);
         ImageUI(emplacement, new Color(.05f,.09f,.16f,.62f));
@@ -384,7 +389,7 @@ public class CollectionRefonteUI : MonoBehaviour
             img.preserveAspect=true;
             Texte("Nom",slot,noms[k].ToUpperInvariant(),18,TexteClair,.01f,.01f,.99f,.23f);
         }
-        var stats = Panneau("StatsRunes",zone,.618f,.205f,.984f,.897f);
+        var stats = Panneau("StatsEquipements",zone,.618f,.205f,.984f,.897f);
         Texte("TitreStats",stats,"STATS · NIV. 1",30,Or,.04f,.89f,.96f,.99f);
         int pv=Stat(perso,0), atk=Stat(perso,1), def=Stat(perso,2);
         string[] lignes={ "PV      "+pv.ToString("N0"),"ATQ     "+atk.ToString("N0"),
@@ -466,15 +471,15 @@ public class CollectionRefonteUI : MonoBehaviour
         return effet+" : "+puissance+" · "+cible+" · RC "+c.Recharge;
     }
 
-    private void VueEquipements(RectTransform zone)
+    private void VueRunes(RectTransform zone)
     {
-        Texte("Titre",zone,"ÉQUIPEMENTS",39,Or,.07f,.79f,.93f,.97f);
+        Texte("Titre",zone,"RUNES",39,Or,.07f,.79f,.93f,.97f);
         Texte("Explication",zone,
-            "L'onglet ÉQUIPEMENTS est réservé à un futur système de personnalisation.\n\n"+
-            "Les six Reliques prévues dans le document du jeu sont accessibles dans l'onglet RUNES.\n\n"+
-            "Aucun objet n'est ajouté artificiellement au joueur.",
+            "Cet onglet n'a pas encore de fonction distincte dans le prototype.\n\n"+
+            "Les six emplacements de Reliques sont maintenant dans ÉQUIPEMENTS.\n\n"+
+            "Aucune Rune supplémentaire n'est définie pour le moment.",
             30,TexteClair,.07f,.23f,.93f,.77f,TextAlignmentOptions.Center);
-        Bouton("RetourRunes",zone,"VOIR MES RUNES",()=>ChangerOnglet(Onglet.Runes),
+        Bouton("RetourEquipements",zone,"VOIR MES ÉQUIPEMENTS",()=>ChangerOnglet(Onglet.Equipements),
             .21f,.065f,.79f,.16f,true,27);
     }
 
