@@ -538,9 +538,6 @@ public class CollectionRefonteUI : MonoBehaviour
         Entete("ENCYCLOPÉDIE", "Fiche de "+p.Nom, RetourGalerie);
         Bouton("RetourGalerie",racine,"‹  GALERIE",RetourGalerie,
             .035f,.858f,.39f,.915f,false,29);
-        Bouton("PossedeEtat",racine,
-            DonneesJoueur.Possede(indexSelectionne)?"DÉJÀ POSSÉDÉ":"NON POSSÉDÉ",null,
-            .54f,.858f,.967f,.915f,false,25,false);
 
         var art=Panneau("FicheIllustration",racine,.03f,.489f,.514f,.849f);
         var portrait=Zone("Illustration",art,.03f,.045f,.97f,.965f);
@@ -560,19 +557,6 @@ public class CollectionRefonteUI : MonoBehaviour
             float yy=.62f-i*.108f;
             Texte("Stat"+i,resume,lignes[i],29,TexteClair,
                 .075f,yy-.09f,.925f,yy+.01f,TextAlignmentOptions.MidlineLeft);
-        }
-        // Icônes interactives : accéder directement à la competence i.
-        if (p.Competences != null)
-        {
-            int nb=Mathf.Min(3,p.Competences.Length);
-            for(int j=0;j<nb;j++)
-            {
-                int pos=j;
-                float xx=.07f+j*.30f;
-                Bouton("SkillIcon"+j,resume,"S"+(j+1),
-                    ()=>{onglet=Onglet.Competences; Construire();},
-                    xx,.028f,xx+.25f,.143f,false,24);
-            }
         }
 
         var tabs=Zone("TabsEncyclo",racine,.035f,.433f,.965f,.487f);
