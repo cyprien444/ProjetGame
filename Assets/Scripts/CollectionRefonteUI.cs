@@ -649,8 +649,6 @@ public class CollectionRefonteUI : MonoBehaviour
             indexSelectionne=0;
         Perso p=Donnees.Persos[indexSelectionne];
         Entete("ENCYCLOPÉDIE", "Fiche de "+p.Nom, RetourGalerie);
-        Bouton("RetourGalerie",racine,"‹  GALERIE",RetourGalerie,
-            .035f,.858f,.39f,.915f,false,29);
 
         var art=Panneau("FicheIllustration",racine,.03f,.489f,.514f,.849f);
         var portrait=Zone("Illustration",art,.03f,.045f,.97f,.965f);
@@ -682,7 +680,7 @@ public class CollectionRefonteUI : MonoBehaviour
         if(onglet==Onglet.Infos) DetailEncycloInfos(contenu,p);
         else if(onglet==Onglet.Competences) DetailEncycloCompetences(contenu,p);
         else DetailEncycloUtilisations(contenu,p);
-        Texte("Note",racine,"Statistiques de base au niveau 1 · Utilise « GALERIE » pour choisir un autre héros.",
+        Texte("Note",racine,"Statistiques de base au niveau 1 · Retour en haut à gauche pour choisir un autre héros.",
             22,TexteSecondaire,.05f,.018f,.95f,.063f);
     }
 
