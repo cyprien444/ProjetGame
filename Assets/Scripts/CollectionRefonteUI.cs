@@ -260,12 +260,24 @@ public class CollectionRefonteUI : MonoBehaviour
         var i = ImageUI(imgRect, Color.white);
         i.sprite = Portrait(index);
         i.preserveAspect = true;
-        if (i.sprite == null)
-            Texte("Initiale", imgRect, Donnees.Persos[index].Nom.Substring(0,1),
-                50, Or, 0f, 0f, 1f, 1f);
-        if (etiquette)
-            Texte("Nom", parent, Donnees.Persos[index].Nom, 21, TexteClair,
-                0f, .015f, 1f, .23f);
+       
+        bool estPossede = DonneesJoueur.Possede(index);
+
+        // On conserve exactement la meme image
+        // et on desactive l'ancien shader gris.
+        i.material = null;
+
+        if (estPossede)
+        {
+            // Photo originale, sans modification
+            i.color = Color.white;
+        }
+        else
+        {
+            // Meme photo, simplement plus sombre
+            i.color = new Color(0.65f, 0.65f, 0.65f, 1f);
+        }
+
     }
 
     // Bandeau de mini portraits pour la collection personnelle : toujours visible.
