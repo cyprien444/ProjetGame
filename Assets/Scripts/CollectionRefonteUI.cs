@@ -11,7 +11,8 @@ using ProjetGame.Moteur;
 // La collection personnelle lit DonneesJoueur ; l'encyclopedie lit les 15 entrees de persos.json.
 public class CollectionRefonteUI : MonoBehaviour
 {
-    private enum Mode { Personnelle, Galerie, FicheEncyclopedie }
+    private enum Mode { Personnelle, Galerie, FicheEncyclopedie, InfoPersonnage }
+    private enum SousInfo { Avis, Utilisations, Equipements }
     private enum Onglet { Competences, Infos, Equipements, Runes, Utilisations }
 
     private static readonly Color Or = new Color(0.96f, 0.76f, 0.39f);
@@ -24,11 +25,13 @@ public class CollectionRefonteUI : MonoBehaviour
     private Mode mode = Mode.Personnelle;
     private Onglet onglet = Onglet.Equipements;
     private int indexSelectionne = -1;
+    private int indexCompetence = 0;
+    private SousInfo sousInfo = SousInfo.Avis;
     private RectTransform racine;
     private ScrollRect listePortraits;
     private TMP_Text texteInfo;
     private float positionVerticale = 1f;
-    private float positionHorizontale = 0f;
+    private float positionHorizontaleMesHeros = 0f;
     private bool pret;
 
     private void Awake()
@@ -175,9 +178,9 @@ public class CollectionRefonteUI : MonoBehaviour
     private void RetenirDefilement()
     {
         if (listePortraits == null) return;
-        if (mode == Mode.Personnelle) positionVerticale = listePortraits.verticalNormalizedPosition;
-        else if (mode == Mode.FicheEncyclopedie)
-            positionHorizontale = listePortraits.horizontalNormalizedPosition;
+        // Seule la bande « Mes héros » est défilante.
+        if (mode == Mode.Personnelle)
+            positionHorizontaleMesHeros = listePortraits.horizontalNormalizedPosition;
     }
 
     private void Selection(int index)
@@ -185,6 +188,7 @@ public class CollectionRefonteUI : MonoBehaviour
         if (index < 0 || index >= Donnees.Persos.Length) return;
         RetenirDefilement();
         indexSelectionne = index;
+        indexCompetence = 0;
         // Conserver l'onglet actif lorsque l'on change de personnage.
         // Depuis la galerie de l'encyclopedie, ouvrir la nouvelle fiche sur INFOS.
         if (mode == Mode.Galerie)
@@ -213,6 +217,25 @@ public class CollectionRefonteUI : MonoBehaviour
         Construire();
     }
 
+    private void OuvrirInfoPersonnage()
+    {
+        mode = Mode.InfoPersonnage;
+        sousInfo = SousInfo.Avis;
+        Construire();
+    }
+
+    private void RetourFichePersonnelle()
+    {
+        mode = Mode.Personnelle;
+        Construire();
+    }
+
+    private void ChangerSousInfo(SousInfo nouveau)
+    {
+        sousInfo = nouveau;
+        Construire();
+    }
+
     private void ChangerOnglet(Onglet nouveau)
     {
         RetenirDefilement();
@@ -234,6 +257,7 @@ public class CollectionRefonteUI : MonoBehaviour
         ImageUI(racine, Color.white, "fond_codex");
         if (mode == Mode.Personnelle) ConstruirePersonnelle();
         else if (mode == Mode.Galerie) ConstruireGalerie();
+        else if (mode == Mode.InfoPersonnage) ConstruireInfoPersonnage();
         else ConstruireFicheEncyclopedie();
     }
 
@@ -260,112 +284,201 @@ public class CollectionRefonteUI : MonoBehaviour
         var i = ImageUI(imgRect, Color.white);
         i.sprite = Portrait(index);
         i.preserveAspect = true;
-       
-        bool estPossede = DonneesJoueur.Possede(index);
-
-        // On conserve exactement la meme image
-        // et on desactive l'ancien shader gris.
-        i.material = null;
-
-        if (estPossede)
-        {
-            // Photo originale, sans modification
-            i.color = Color.white;
-        }
-        else
-        {
-            // Meme photo, simplement plus sombre
-            i.color = new Color(0.65f, 0.65f, 0.65f, 1f);
-        }
-
+        // Les personnages non possedes conservent leur image d'origine en plus sombre.
+        i.color = DonneesJoueur.Possede(index)
+            ? Color.white : new Color(.65f, .65f, .65f, 1f);
+        if (i.sprite == null)
+            Texte("Initiale", imgRect, Donnees.Persos[index].Nom.Substring(0,1),
+                50, Or, 0f, 0f, 1f, 1f);
+        if (etiquette)
+            Texte("Nom", parent, Donnees.Persos[index].Nom, 21, TexteClair,
+                0f, .015f, 1f, .23f);
     }
 
-    // Bandeau de mini portraits pour la collection personnelle : toujours visible.
-    private void ListeVerticale(Transform parent)
+    // Barre permanente de portraits possedes, en bas. Bouton Encyclopedie a droite.
+    private void BandeMesHerosEnBas(Transform parent)
     {
         var indices = ListePossedee();
-        var panneau = Panneau("ListePersonnelle", parent, .013f, .061f, .171f, .905f);
-        Texte("TitreListe", panneau, "MES HÉROS\n" + indices.Count + "/" + Donnees.Persos.Length,
-            25, Or, .03f, .925f, .97f, .995f);
-        var scroll = Zone("Scroll", panneau, .02f, .025f, .98f, .922f);
+        var panneau = Panneau("BandeMesHeros", parent, .025f, .050f, .975f, .253f);
+        Texte("TitreBande", panneau, "MES HÉROS · " + indices.Count + "/" + Donnees.Persos.Length,
+            23, Or, .025f, .865f, .785f, .995f, TextAlignmentOptions.MidlineLeft);
+        var scroll = Zone("ScrollPossedes", panneau, .012f, .075f, .808f, .868f);
         var sr = scroll.gameObject.AddComponent<ScrollRect>();
-        sr.horizontal = false;
-        sr.vertical = true;
-        sr.scrollSensitivity = 45f;
+        sr.horizontal = true;
+        sr.vertical = false;
+        sr.scrollSensitivity = 55f;
         sr.movementType = ScrollRect.MovementType.Clamped;
-        var viewport = Zone("Viewport", scroll, 0f, 0f, 1f, 1f);
-        ImageUI(viewport, new Color(0f,0f,0f,.02f), null, true);
-        viewport.gameObject.AddComponent<RectMask2D>();
-        var content = Zone("Content", viewport, 0f, 1f, 1f, 1f);
-        content.pivot = new Vector2(.5f, 1f);
-        content.anchoredPosition = Vector2.zero;
-        content.sizeDelta = new Vector2(0, Mathf.Max(2,indices.Count)*160+24);
-        var layout = content.gameObject.AddComponent<GridLayoutGroup>();
-        layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-        layout.constraintCount = 1;
-        layout.cellSize = new Vector2(132f,145f);
-        layout.spacing = new Vector2(0, 14);
-        layout.padding = new RectOffset(3, 3, 6, 6);
-        layout.childAlignment = TextAnchor.UpperCenter;
-        sr.content = content; sr.viewport = viewport;
-        listePortraits = sr;
+        var vp = Zone("Viewport", scroll, 0f, 0f, 1f, 1f);
+        ImageUI(vp, new Color(.01f, .02f, .04f, .05f), null, true);
+        vp.gameObject.AddComponent<RectMask2D>();
+        var content = Zone("Content", vp, 0f, 0f, 0f, 1f);
+        content.pivot = new Vector2(0f, .5f);
+        content.sizeDelta = new Vector2(Mathf.Max(1, indices.Count) * 174f + 24f, 0f);
+        var layout = content.gameObject.AddComponent<HorizontalLayoutGroup>();
+        layout.childAlignment = TextAnchor.MiddleLeft;
+        layout.childControlWidth = false;
+        layout.childControlHeight = false;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = false;
+        layout.spacing = 12f;
+        layout.padding = new RectOffset(10, 10, 0, 0);
         foreach (int index in indices)
         {
-            var v = Zone("PortraitPerso_" + index, content, 0f,0f,0f,0f);
-            DessinerPortrait(v, index, index == indexSelectionne);
+            var cadre = Zone("PortraitPossede_" + index, content, 0f, 0f, 0f, 0f);
+            cadre.sizeDelta = new Vector2(162f, 168f);
+            DessinerPortrait(cadre, index, index == indexSelectionne);
         }
+        sr.content = content;
+        sr.viewport = vp;
+        listePortraits = sr;
         Canvas.ForceUpdateCanvases();
-        sr.verticalNormalizedPosition = positionVerticale;
+        sr.horizontalNormalizedPosition = positionHorizontaleMesHeros;
+        Bouton("BoutonEncyclopedieBas", panneau, "ENCYCLO-\nPÉDIE",
+            BasculerEncyclopedie, .825f, .11f, .988f, .84f, true, 24);
     }
 
+    // Ecran personnel inspire de la reference: art au centre, competences a droite,
+    // statistiques en bas a gauche, liste de heros en bas.
     private void ConstruirePersonnelle()
     {
-        Entete("COLLECTION", "Mes personnages possédés");
-        Bouton("ModePersonnel", racine, "MES HÉROS", BasculerPersonnelle,
-            .19f, .885f, .54f, .927f, true, 25);
-        Bouton("ModeEncyclopedie", racine, "ENCYCLOPÉDIE", BasculerEncyclopedie,
-            .545f, .885f, .98f, .927f, false, 25);
-        ListeVerticale(racine);
         var possedes = ListePossedee();
         if (!possedes.Contains(indexSelectionne))
             indexSelectionne = possedes.Count > 0 ? possedes[0] : -1;
+
+        string titre = indexSelectionne < 0 ? "COLLECTION" : Donnees.Persos[indexSelectionne].Nom.ToUpperInvariant();
+        string sousTitre = indexSelectionne < 0 ? "Aucun héros possédé" :
+            Donnees.Persos[indexSelectionne].Role + " · " + Donnees.Persos[indexSelectionne].Rarete;
+        Entete(titre, sousTitre);
+        BandeMesHerosEnBas(racine);
+
         if (indexSelectionne < 0)
         {
-            var vide = Panneau("SansPersos", racine, .187f,.20f,.981f,.87f);
-            Texte("TexteVide", vide, "Aucun personnage possédé.", 40,
-                TexteClair, .03f,.15f,.97f,.85f);
+            var vide = Panneau("SansHeros", racine, .035f, .32f, .969f, .87f);
+            Texte("AucunHero", vide, "Aucun personnage possédé pour le moment.\n\nOuvre l'Encyclopédie pour voir tous les héros.",
+                36, TexteClair, .05f, .18f, .95f, .82f);
             return;
         }
-        Perso perso = Donnees.Persos[indexSelectionne];
-        var hero = Panneau("Presentation", racine, .187f, .605f, .984f, .882f);
-        var art = Zone("GrandeIllustration", hero, .008f, .035f, .51f, .99f);
-        var ill = ImageUI(art, Color.white);
-        ill.sprite = SpriteUI("HeroArt/" + indexSelectionne);
-        if (ill.sprite == null) ill.sprite = Portrait(indexSelectionne);
-        ill.preserveAspect = true;
-        Texte("Nom", hero, perso.Nom, 59, Or, .51f, .72f, .985f, .96f,
+
+        Perso p = Donnees.Persos[indexSelectionne];
+        var scene = Panneau("ScenePersonnage", racine, .025f, .267f, .746f, .910f);
+        var zoneArt = Zone("HeroCentral", scene, .035f, .195f, .972f, .965f);
+        var art = ImageUI(zoneArt, Color.white);
+        art.sprite = SpriteUI("HeroArt/" + indexSelectionne);
+        if (art.sprite == null) art.sprite = Portrait(indexSelectionne);
+        art.preserveAspect = true;
+
+        Bouton("Informations", scene, "ⓘ INFOS", OuvrirInfoPersonnage,
+            .027f, .875f, .365f, .978f, true, 26);
+
+        var stats = Panneau("StatsBase", scene, .030f, .047f, .57f, .405f);
+        Texte("TitreStats", stats, "STATISTIQUES DE BASE", 25, Or,
+            .035f, .83f, .96f, .98f, TextAlignmentOptions.MidlineLeft);
+        string[] lignes = {
+            "PV       " + Stat(p, 0).ToString("N0"),
+            "ATQ      " + Stat(p, 1).ToString("N0"),
+            "DEF      " + Stat(p, 2).ToString("N0"),
+            "SPD      " + p.Spd,
+            "CRIT     " + p.Crit + " %"
+        };
+        for (int k = 0; k < lignes.Length; k++)
+        {
+            float yy = .765f - k * .142f;
+            Texte("Stat" + k, stats, lignes[k], 26, TexteClair,
+                .06f, yy - .10f, .95f, yy + .02f, TextAlignmentOptions.MidlineLeft);
+        }
+        int n = p.Competences == null ? 0 : p.Competences.Length;
+        if (n > 0)
+        {
+            indexCompetence = Mathf.Clamp(indexCompetence, 0, n - 1);
+            var selected = p.Competences[indexCompetence];
+            var apercu = Panneau("DescriptionCompetence", scene, .59f, .047f, .972f, .405f);
+            Texte("TitreCompetence", apercu, selected.Nom, 25, Or, .045f, .70f, .95f, .97f);
+            Texte("EffetCompetence", apercu, Description(selected), 23, TexteClair,
+                .055f, .13f, .945f, .74f);
+        }
+
+        var competences = Panneau("EchelleCompetences", racine, .752f, .267f, .975f, .910f);
+        Texte("CompetencesTitre", competences, "COMPÉTENCES", 25, Or,
+            .02f, .908f, .98f, .989f);
+        for (int j = 0; j < 3; j++)
+        {
+            int pos = j;
+            bool existe = p.Competences != null && j < p.Competences.Length;
+            float y = .69f - j * .215f;
+            Bouton("Competence" + j, competences, (j + 1).ToString(),
+                existe ? (Action)(() => { indexCompetence = pos; Construire(); }) : null,
+                .20f, y, .80f, y + .158f, existe && indexCompetence == j, 45, existe);
+            Texte("CompetenceNom" + j, competences,
+                existe ? p.Competences[j].Nom : "À DÉBLOQUER", 20,
+                existe ? TexteClair : TexteSecondaire,
+                .015f, y - .067f, .985f, y + .005f);
+        }
+        Bouton("Eveil", competences, "ÉVEIL", null,
+            .115f, .025f, .885f, .139f, false, 24, false);
+        Texte("EveilNote", competences, "À VENIR", 18, TexteSecondaire,
+            .025f, .148f, .975f, .187f);
+    }
+
+    // La page d'information est preparee. Les avis et tendances demanderont plus tard
+    // un compte joueur, un etat d'eveil et des donnees communautaires reelles.
+    private void ConstruireInfoPersonnage()
+    {
+        if (indexSelectionne < 0 || indexSelectionne >= Donnees.Persos.Length)
+        {
+            RetourFichePersonnelle();
+            return;
+        }
+        Perso p = Donnees.Persos[indexSelectionne];
+        Entete("INFOS DU HÉROS", p.Nom, RetourFichePersonnelle);
+        Bouton("RetourVersFiche", racine, "‹ FICHE DU HÉROS", RetourFichePersonnelle,
+            .033f, .849f, .553f, .906f, false, 25);
+        var identite = Panneau("IdentificationHeros", racine, .035f, .690f, .965f, .841f);
+        var cadre = Zone("MiniPortrait", identite, .035f, .085f, .235f, .915f);
+        var img = ImageUI(cadre, Color.white);
+        img.sprite = Portrait(indexSelectionne);
+        img.preserveAspect = true;
+        Texte("NomHero", identite, p.Nom, 44, Or, .275f, .56f, .955f, .90f,
             TextAlignmentOptions.MidlineLeft);
-        Texte("RoleRarete", hero, perso.Role + "  ·  " + perso.Rarete, 31,
-            TexteClair, .52f, .49f, .985f, .73f, TextAlignmentOptions.MidlineLeft);
-        Texte("Niv", hero, "NIV. 1  /  PROTOTYPE", 27, AccentBleu,
-            .52f, .29f, .97f, .48f, TextAlignmentOptions.MidlineLeft);
-        Texte("Posse", hero, "PERSONNAGE POSSÉDÉ", 22, Or,
-            .52f, .09f, .985f, .28f, TextAlignmentOptions.MidlineLeft);
+        Texte("RoleHero", identite, p.Role + " · " + p.Rarete, 27, TexteClair,
+            .275f, .17f, .955f, .54f, TextAlignmentOptions.MidlineLeft);
 
-        var tabs = Zone("Onglets", racine, .186f, .548f, .984f, .603f);
-        Tab(tabs,"COMPÉTENCES",Onglet.Competences,0f,.247f);
-        Tab(tabs,"INFOS",Onglet.Infos,.251f,.498f);
-        Tab(tabs,"ÉQUIPEMENTS",Onglet.Equipements,.502f,.749f);
-        Tab(tabs,"RUNES",Onglet.Runes,.753f,1f);
-
-        var panneau = Panneau("Contenu", racine, .187f, .069f, .984f, .542f);
-        if (onglet == Onglet.Equipements) VueEquipements(panneau, perso);
-        else if (onglet == Onglet.Infos) VueInfos(panneau, perso);
-        else if (onglet == Onglet.Competences) VueCompetences(panneau,perso);
-        else VueRunes(panneau);
-        texteInfo = Texte("BasMessage", racine,
-            "Prototype : emplacements visibles dans ÉQUIPEMENTS ; système de Reliques à l'étape 10.",
-            20, TexteSecondaire, .19f, .016f, .982f, .062f);
+        var tabs = Zone("OngletsInfo", racine, .035f, .616f, .965f, .678f);
+        Bouton("Avis", tabs, "COMMUNAUTÉ", () => ChangerSousInfo(SousInfo.Avis),
+            .00f, .03f, .328f, .98f, sousInfo == SousInfo.Avis, 23);
+        Bouton("Utilisations", tabs, "UTILISATIONS", () => ChangerSousInfo(SousInfo.Utilisations),
+            .336f, .03f, .662f, .98f, sousInfo == SousInfo.Utilisations, 23);
+        Bouton("ReliquesPopulaires", tabs, "ÉQUIPEMENTS", () => ChangerSousInfo(SousInfo.Equipements),
+            .670f, .03f, 1f, .98f, sousInfo == SousInfo.Equipements, 23);
+        var contenu = Panneau("ContenuInfos", racine, .035f, .15f, .965f, .604f);
+        if (sousInfo == SousInfo.Avis)
+        {
+            Texte("Titre", contenu, "AVIS DE LA COMMUNAUTÉ", 35, Or,
+                .05f, .82f, .95f, .965f);
+            Texte("Explication", contenu,
+                "Plus tard, un compte joueur pourra donner un seul avis sur ce personnage, après son éveil.\n\n" +
+                "Aucun avis communautaire n'est disponible dans ce prototype.",
+                28, TexteClair, .065f, .34f, .935f, .78f);
+            Bouton("DonnerAvis", contenu, "DONNER MON AVIS · À VENIR", null,
+                .10f, .08f, .90f, .20f, false, 25, false);
+        }
+        else if (sousInfo == SousInfo.Utilisations)
+        {
+            Texte("Titre", contenu, "OÙ CE HÉROS EST-IL UTILISÉ ?", 33, Or,
+                .05f, .83f, .95f, .97f);
+            Texte("Explication", contenu,
+                "À terme : répartition des utilisations par mode de jeu, basée sur les équipes réelles de la communauté.\n\n" +
+                "Les données ne sont pas encore collectées. Aucun pourcentage n'est inventé.",
+                27, TexteClair, .065f, .18f, .935f, .79f);
+        }
+        else
+        {
+            Texte("Titre", contenu, "ÉQUIPEMENTS LES PLUS UTILISÉS", 33, Or,
+                .05f, .83f, .95f, .97f);
+            Texte("Explication", contenu,
+                "À terme : sets de Reliques et statistiques d'équipement les plus utilisés sur ce héros.\n\n" +
+                "Aucune donnée communautaire disponible pour le moment.",
+                28, TexteClair, .065f, .18f, .935f, .79f);
+        }
     }
 
     private void Tab(RectTransform parent, string nom, Onglet cible, float x1, float x2)
@@ -501,45 +614,33 @@ public class CollectionRefonteUI : MonoBehaviour
         Debug.Log("CollectionRefonteUI : " + message);
     }
 
+    // Encyclopedie : page galerie complete, sans barre de defilement.
+    // Les 15 portraits sont visibles directement. Clic => fiche dediee.
     private void ConstruireGalerie()
     {
-        Entete("ENCYCLOPÉDIE", "Toutes les légendes · "+Donnees.Persos.Length+" personnages",
-            () => BasculerPersonnelle());
-        Bouton("MesHeros",racine,"MES HÉROS",BasculerPersonnelle,
-            .035f,.862f,.48f,.917f,false,29);
-        Bouton("Gallery",racine,"GALERIE DES HÉROS",null,
-            .515f,.862f,.965f,.917f,true,27);
-        var p=Panneau("GaleriePortraits",racine,.032f,.065f,.968f,.854f);
-        Texte("Instruction",p,"TOUCHE UN PORTRAIT POUR OUVRIR SA FICHE",29,Or,
-            .045f,.915f,.955f,.981f);
-        var scroll=Zone("ScrollGalerie",p,.03f,.025f,.97f,.911f);
-        var sr=scroll.gameObject.AddComponent<ScrollRect>();
-        sr.vertical=true; sr.horizontal=false; sr.movementType=ScrollRect.MovementType.Clamped;
-        sr.scrollSensitivity=75f;
-        var vp=Zone("Viewport",scroll,0f,0f,1f,1f);
-        ImageUI(vp,new Color(.01f,.02f,.04f,.02f),null,true);
-        vp.gameObject.AddComponent<RectMask2D>();
-        var content=Zone("Content",vp,0f,1f,1f,1f);
-        content.pivot=new Vector2(.5f,1f);
-        content.anchoredPosition=Vector2.zero;
-        var layout=content.gameObject.AddComponent<GridLayoutGroup>();
-        layout.constraint=GridLayoutGroup.Constraint.FixedColumnCount;
-        layout.constraintCount=4;
-        layout.cellSize=new Vector2(190,206);
-        layout.spacing=new Vector2(23,24);
-        layout.padding=new RectOffset(18,18,18,18);
-        layout.childAlignment=TextAnchor.UpperCenter;
-        int rows=Mathf.CeilToInt(Donnees.Persos.Length/4f);
-        content.sizeDelta=new Vector2(0,rows*230+40);
-        for(int k=0;k<Donnees.Persos.Length;k++)
+        Entete("ENCYCLOPÉDIE", "Toutes les légendes · " + Donnees.Persos.Length + " personnages",
+            BasculerPersonnelle);
+        var panneau = Panneau("GaleriePortraits", racine, .032f, .065f, .968f, .910f);
+        Texte("Instruction", panneau, "CHOISIS UN PERSONNAGE POUR OUVRIR SA FICHE", 29, Or,
+            .045f, .916f, .955f, .982f);
+
+        // Grille fixe de 4 colonnes, sans ScrollRect ni bande de portraits.
+        var grille = Zone("GrillePortraits", panneau, .03f, .055f, .97f, .906f);
+        var layout = grille.gameObject.AddComponent<GridLayoutGroup>();
+        layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+        layout.constraintCount = 4;
+        layout.cellSize = new Vector2(200f, 224f);
+        layout.spacing = new Vector2(20f, 26f);
+        layout.padding = new RectOffset(16, 16, 18, 18);
+        layout.childAlignment = TextAnchor.UpperCenter;
+        for (int k = 0; k < Donnees.Persos.Length; k++)
         {
-            var frame=Zone("Hero"+k,content,0f,0f,0f,0f);
-            DessinerPortrait(frame,k,k==indexSelectionne);
+            var frame = Zone("Hero" + k, grille, 0f, 0f, 0f, 0f);
+            DessinerPortrait(frame, k, k == indexSelectionne);
         }
-        sr.viewport=vp; sr.content=content;
-        Texte("Bas",racine,
-            "Les personnages non possédés sont consultables, mais non modifiables.",
-            25,TexteSecondaire,.05f,.014f,.95f,.062f);
+        Texte("Bas", racine,
+            "Portraits assombris : héros non possédés · Tous les personnages sont consultables.",
+            24, TexteSecondaire, .05f, .014f, .95f, .062f);
     }
 
     private void ConstruireFicheEncyclopedie()
@@ -575,17 +676,14 @@ public class CollectionRefonteUI : MonoBehaviour
         TabEncyclo(tabs,"INFOS",Onglet.Infos,0f,.326f);
         TabEncyclo(tabs,"COMPÉTENCES",Onglet.Competences,.336f,.662f);
         TabEncyclo(tabs,"UTILISATIONS",Onglet.Utilisations,.672f,1f);
-        var contenu=Panneau("DetailsHeros",racine,.034f,.218f,.966f,.431f);
+        // Page individuelle : aucun mini-portrait en bas. Retour => galerie des 15.
+        // Le panneau agrandi utilise l'espace anciennement occupe par la bande de defilement.
+        var contenu=Panneau("DetailsHeros",racine,.034f,.070f,.966f,.431f);
         if(onglet==Onglet.Infos) DetailEncycloInfos(contenu,p);
         else if(onglet==Onglet.Competences) DetailEncycloCompetences(contenu,p);
         else DetailEncycloUtilisations(contenu,p);
-
-        var portraitBar=Panneau("TousLesPortraits",racine,.033f,.044f,.967f,.207f);
-        Texte("Legendes",portraitBar,"CHOISIR UNE AUTRE LÉGENDE",24,Or,
-            .025f,.835f,.975f,.98f);
-        BandeHorizontale(portraitBar);
-        Texte("Note",racine,"Statistiques de base au niveau 1 · Pas d'éléments dans le prototype.",
-            22,TexteSecondaire,.05f,.003f,.95f,.044f);
+        Texte("Note",racine,"Statistiques de base au niveau 1 · Utilise « GALERIE » pour choisir un autre héros.",
+            22,TexteSecondaire,.05f,.018f,.95f,.063f);
     }
 
     private void TabEncyclo(RectTransform parent,string title,Onglet cible,float x1,float x2)
@@ -640,35 +738,5 @@ public class CollectionRefonteUI : MonoBehaviour
             23,TexteSecondaire,.045f,.05f,.955f,.34f);
     }
 
-    private void BandeHorizontale(RectTransform parent)
-    {
-        var scroll=Zone("ScrollPortraits",parent,.025f,.065f,.975f,.835f);
-        var sr=scroll.gameObject.AddComponent<ScrollRect>();
-        sr.horizontal=true; sr.vertical=false;
-        sr.scrollSensitivity=65f;sr.movementType=ScrollRect.MovementType.Clamped;
-        var vp=Zone("Viewport",scroll,0f,0f,1f,1f);
-        ImageUI(vp,new Color(.01f,.03f,.05f,.05f),null,true);
-        vp.gameObject.AddComponent<RectMask2D>();
-        var content=Zone("Content",vp,0f,0f,0f,1f);
-        content.pivot=new Vector2(0f,.5f);
-        content.sizeDelta=new Vector2(Donnees.Persos.Length*142f+25f,0f);
-        var layout=content.gameObject.AddComponent<HorizontalLayoutGroup>();
-        layout.childAlignment=TextAnchor.MiddleLeft;
-        layout.childControlWidth=false;
-        layout.childControlHeight=false;
-        layout.childForceExpandHeight=false;
-        layout.childForceExpandWidth=false;
-        layout.spacing=10f;
-        layout.padding=new RectOffset(10,10,0,0);
-        for(int k=0;k<Donnees.Persos.Length;k++)
-        {
-            var item=Zone("Portrait"+k,content,0f,0f,0f,0f);
-            item.sizeDelta=new Vector2(132f,136f);
-            DessinerPortrait(item,k,k==indexSelectionne);
-        }
-        sr.content=content;sr.viewport=vp;
-        listePortraits=sr;
-        Canvas.ForceUpdateCanvases();
-        sr.horizontalNormalizedPosition=positionHorizontale;
-    }
+
 }
