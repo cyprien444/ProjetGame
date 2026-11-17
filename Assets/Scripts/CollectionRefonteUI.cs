@@ -816,13 +816,64 @@ public class CollectionRefonteUI : MonoBehaviour
             24, TexteSecondaire, .05f, .014f, .95f, .062f);
     }
 
+    // Un seul Sprite procedurale reutilise pour tous les separateurs.
+    // On garde le panneau et ses textes independants pour une future evolution.
+    private static Sprite separateurStatsDegrade;
+
+    private static Sprite ObtenirSeparateurStatsDegrade()
+    {
+        if (separateurStatsDegrade != null) return separateurStatsDegrade;
+
+        const int largeur = 256;
+        var texture = new Texture2D(largeur, 2, TextureFormat.RGBA32, false);
+        texture.wrapMode = TextureWrapMode.Clamp;
+        texture.filterMode = FilterMode.Bilinear;
+        texture.name = "SeparateurStatsOrDegrade";
+
+        for (int x = 0; x < largeur; x++)
+        {
+            float t = x / (float)(largeur - 1);
+            float proximiteCentre = 1f - Mathf.Abs(2f * t - 1f);
+            float eclat = Mathf.Pow(proximiteCentre, 1.7f);
+            var teinte = new Color(
+                1f,
+                Mathf.Lerp(.58f, .89f, eclat),
+                Mathf.Lerp(.24f, .60f, eclat),
+                Mathf.Lerp(.035f, .93f, eclat));
+            texture.SetPixel(x, 0, teinte);
+            texture.SetPixel(x, 1, teinte);
+        }
+        texture.Apply();
+        separateurStatsDegrade = Sprite.Create(texture,
+            new Rect(0f, 0f, largeur, 2f), new Vector2(.5f, .5f), 100f);
+        return separateurStatsDegrade;
+    }
+
+    private void AjouterSeparateurStats(RectTransform parent, string nom, float hauteur)
+    {
+        // Halo large et discret, puis trait fin; toute la largeur est en degrade.
+        var halo = Zone(nom + "_Halo", parent,
+            .105f, hauteur - .007f, .895f, hauteur + .007f);
+        var haloImage = ImageUI(halo, new Color(1f, 1f, 1f, .22f));
+        haloImage.sprite = ObtenirSeparateurStatsDegrade();
+        haloImage.raycastTarget = false;
+
+        var trait = Zone(nom, parent,
+            .105f, hauteur - .0023f, .895f, hauteur + .0023f);
+        var image = ImageUI(trait, Color.white);
+        image.sprite = ObtenirSeparateurStatsDegrade();
+        image.raycastTarget = false;
+    }
+
     // Fermeture de la fiche : fond bleu nuit propre, bordure doree biseautee,
     // deux diagonales UGUI pour la croix. Aucun caractère spécial / sprite requis.
     private void ConstruireCroixRetourEncyclopedie(RectTransform banniere)
     {
+        // Décale la croix d'environ 12 pixels Canvas (référence 1080).
+        // Son image cliquable est transparente : le bleu de la bannière reste visible.
         var zone = Zone("RetourGalerie", banniere,
-            .885f, .218f, .976f, .782f);
-        var fond = ImageUI(zone, new Color(.046f, .072f, .119f, 1f), null, true);
+            .873f, .218f, .964f, .782f);
+        var fond = ImageUI(zone, Color.clear, null, true);
         var bouton = zone.gameObject.AddComponent<Button>();
         bouton.targetGraphic = fond;
         bouton.onClick.AddListener(RetourGalerie);
@@ -946,9 +997,8 @@ public class CollectionRefonteUI : MonoBehaviour
             "STATISTIQUES", 28, Or,
             .09f, .837f, .91f, .970f, TextAlignmentOptions.Center);
         titreStatistiques.fontStyle = FontStyles.Bold;
-        var traitTitre = Zone("SeparateurTitre", statistiques,
-            .100f, .817f, .900f, .823f);
-        ImageUI(traitTitre, new Color(.93f, .73f, .37f, .45f));
+        // Reflet dore : centre lumineux, extremites douces et assombries.
+        AjouterSeparateurStats(statistiques, "SeparateurTitre", .820f);
 
         string[] etiquettes = { "PV", "ATQ", "DEF", "SPD", "CRIT" };
         float[] centre = { .735f, .582f, .430f, .278f, .126f };
@@ -974,12 +1024,9 @@ public class CollectionRefonteUI : MonoBehaviour
             valeur.overflowMode = TextOverflowModes.Overflow;
             valeur.margin = Vector4.zero;
 
-            if (i < valeurs.Length - 1)
-            {
-                var separateur = Zone("SeparateurStat_" + i, statistiques,
-                    .115f, centre[i] - .078f, .885f, centre[i] - .074f);
-                ImageUI(separateur, new Color(.88f, .68f, .35f, .29f));
-            }
+            // Cinq traits sous les cinq lignes : y compris sous CRIT.
+            AjouterSeparateurStats(statistiques,
+                "SeparateurStat_" + i, centre[i] - .077f);
         }
 
         // 6 - Pop-up de details : absente par defaut comme sur la reference.
