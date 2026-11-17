@@ -81,8 +81,11 @@ public sealed class ContourDoreUI : MaskableGraphic
         {
             int a = debut + 2 * i;
             int b = debut + 2 * ((i + 1) % 8);
-            vh.AddTriangle(a, b, a + 1);
-            vh.AddTriangle(b, b + 1, a + 1);
+            // Unity UI affiche la face avant des triangles orientés vers -Z.
+            // Le précédent ordre faisait pointer les faces vers +Z :
+            // les cadres étaient entièrement invisibles (back-face culling).
+            vh.AddTriangle(a, a + 1, b);
+            vh.AddTriangle(b, a + 1, b + 1);
         }
     }
 }

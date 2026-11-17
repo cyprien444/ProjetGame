@@ -265,10 +265,10 @@ public class CollectionRefonteUI : MonoBehaviour
         var zone = Zone(nom, parent, x1, y1, x2, y2);
         var image = ImageUI(zone, Color.white);
 
-        // V3.5.4 : les cadres des statistiques et de la colonne de droite
-        // sont dessines par Unity, et non etires depuis un PNG.
-        // Cela garantit quatre cotes visibles et un rendu identique pour les
-        // trois competences, meme si des sprites importes sont mal decoupes.
+        // V3.5.6 : cadres 100 % Unity UI avec des Image standard.
+        // Les anciens PNG et ContourDoreUI ne sont plus utilises.
+        // Le dessin utilise des bandes UI standard (4 cotes a chaque couche),
+        // sans mesh personnalise, sans decoupage d'images et sans losange.
         bool estCadre = ressource == "panneau_stats" ||
                         ressource == "icone_eveil" ||
                         ressource == "icone_lead" ||
@@ -278,13 +278,10 @@ public class CollectionRefonteUI : MonoBehaviour
                         ressource == "icone_skill_3";
         if (estCadre)
         {
-            // L'Image de base reste presente : les boutons fonctionnent.
-            // Le cadre dessine en enfant ne capte jamais les clics.
+            // Graphic invisible conservé pour les boutons et leur zone de clic.
             image.sprite = null;
             image.color = Color.clear;
-            var trait = Zone("ContourDore", zone, 0f, 0f, 1f, 1f);
-            var contour = trait.gameObject.AddComponent<ContourDoreUI>();
-            contour.raycastTarget = false;
+            DessinerCadreAvecImagesUnity(zone);
         }
         else
         {
@@ -299,6 +296,64 @@ public class CollectionRefonteUI : MonoBehaviour
             }
         }
         return zone;
+    }
+
+    // V3.5.6 : contour dore robuste, construit avec des Image UGUI ordinaires.
+    // Chaque face est un rectangle horizontal/vertical ancre au bord exact
+    // de l'emplacement. Cela fonctionne sans shader, sprite ou Mesh personnalise.
+    // Les trois competences emploient exactement la meme fonction et les
+    // memes coordonnees : largeur/hauteur assurees par ConstruireFicheEncyclopedie.
+    private void DessinerCadreAvecImagesUnity(RectTransform parent)
+    {
+        AjouterCoucheCadre(parent, "Ombre", 2f, 10f,
+            new Color(0.22f, 0.13f, 0.055f, 0.97f));
+        AjouterCoucheCadre(parent, "Or", 3.5f, 6f,
+            new Color(0.83f, 0.57f, 0.22f, 1f));
+        AjouterCoucheCadre(parent, "Reflet", 4.5f, 1.8f,
+            new Color(1f, 0.88f, 0.58f, 1f));
+        AjouterCoucheCadre(parent, "LiseréInterieur", 10f, 1.5f,
+            new Color(0.58f, 0.36f, 0.13f, 0.90f));
+    }
+
+    private void AjouterCoucheCadre(RectTransform parent, string nom,
+        float marge, float epaisseur, Color teinte)
+    {
+        // Ordre volontaire : les quatre segments appartiennent au meme parent.
+        // Toutes les mesures sont en pixels UI, et la longueur s'adapte
+        // automatiquement a chaque emplacement avec des ancres étirées.
+        AjouterBandeCadre(parent, nom + "_Haut",
+            new Vector2(0f, 1f), new Vector2(1f, 1f),
+            new Vector2(.5f, 1f), new Vector2(-2f * marge, epaisseur),
+            new Vector2(0f, -marge), teinte);
+        AjouterBandeCadre(parent, nom + "_Bas",
+            new Vector2(0f, 0f), new Vector2(1f, 0f),
+            new Vector2(.5f, 0f), new Vector2(-2f * marge, epaisseur),
+            new Vector2(0f, marge), teinte);
+        AjouterBandeCadre(parent, nom + "_Gauche",
+            new Vector2(0f, 0f), new Vector2(0f, 1f),
+            new Vector2(0f, .5f), new Vector2(epaisseur, -2f * marge),
+            new Vector2(marge, 0f), teinte);
+        AjouterBandeCadre(parent, nom + "_Droite",
+            new Vector2(1f, 0f), new Vector2(1f, 1f),
+            new Vector2(1f, .5f), new Vector2(epaisseur, -2f * marge),
+            new Vector2(-marge, 0f), teinte);
+    }
+
+    private void AjouterBandeCadre(RectTransform parent, string nom,
+        Vector2 ancreMin, Vector2 ancreMax, Vector2 pivot,
+        Vector2 taille, Vector2 position, Color teinte)
+    {
+        var objet = new GameObject(nom, typeof(RectTransform));
+        objet.transform.SetParent(parent, false);
+        var rt = objet.GetComponent<RectTransform>();
+        rt.anchorMin = ancreMin;
+        rt.anchorMax = ancreMax;
+        rt.pivot = pivot;
+        rt.sizeDelta = taille;
+        rt.anchoredPosition = position;
+        var trait = objet.AddComponent<Image>();
+        trait.color = teinte;
+        trait.raycastTarget = false;
     }
 
     private void BoutonFicheImage(string nom, Transform parent, string ressource,
