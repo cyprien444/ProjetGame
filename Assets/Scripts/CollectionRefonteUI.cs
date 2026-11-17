@@ -898,7 +898,7 @@ public class CollectionRefonteUI : MonoBehaviour
         BoutonFicheImage("Lead", racine,
             meneurExiste ? "icone_lead" : "icone_vide",
             meneurExiste ? (Action)SelectionnerMeneurEncyclopedie : null,
-            .772f, .239f, .965f, .350f, meneurExiste);
+            .786f, .263f, .954f, .359f, meneurExiste);
 
         // 5 - Veritable panneau dore de la maquette : les chiffres originaux
         // ont ete effaces de l'asset, puis remplis avec les stats JSON du heros.
