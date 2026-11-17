@@ -26,7 +26,11 @@ public class CollectionRefonteUI : MonoBehaviour
     private Onglet onglet = Onglet.Equipements;
     private int indexSelectionne = -1;
     private int indexCompetence = 0;
+    // Fiche encyclopedie : un panneau d'explication n'apparait qu'au clic.
+    private bool afficherDescriptionCompetence = false;
+    private bool afficherDescriptionMeneur = false;
     private SousInfo sousInfo = SousInfo.Avis;
+    private Mode retourDepuisInfos = Mode.Personnelle;
     private RectTransform racine;
     private ScrollRect listePortraits;
     private TMP_Text texteInfo;
@@ -189,6 +193,8 @@ public class CollectionRefonteUI : MonoBehaviour
         RetenirDefilement();
         indexSelectionne = index;
         indexCompetence = 0;
+        afficherDescriptionCompetence = false;
+        afficherDescriptionMeneur = false;
         // Conserver l'onglet actif lorsque l'on change de personnage.
         // Depuis la galerie de l'encyclopedie, ouvrir la nouvelle fiche sur INFOS.
         if (mode == Mode.Galerie)
@@ -219,14 +225,70 @@ public class CollectionRefonteUI : MonoBehaviour
 
     private void OuvrirInfoPersonnage()
     {
+        retourDepuisInfos = mode;
         mode = Mode.InfoPersonnage;
         sousInfo = SousInfo.Avis;
         Construire();
     }
 
+    // Ces deux raccourcis sont reserves a la fiche de l'Encyclopedie.
+    // Ils reutilisent la page d'infos deja presente dans la V3.4.
+    private void OuvrirInfoDepuisEncyclopedie(SousInfo section)
+    {
+        retourDepuisInfos = Mode.FicheEncyclopedie;
+        sousInfo = section;
+        mode = Mode.InfoPersonnage;
+        Construire();
+    }
+
+    private void SelectionnerCompetenceEncyclopedie(int numero)
+    {
+        bool etaitOuverte = afficherDescriptionCompetence && indexCompetence == numero;
+        indexCompetence = numero;
+        afficherDescriptionCompetence = !etaitOuverte;
+        afficherDescriptionMeneur = false;
+        Construire();
+    }
+
+    private void SelectionnerMeneurEncyclopedie()
+    {
+        afficherDescriptionMeneur = !afficherDescriptionMeneur;
+        afficherDescriptionCompetence = false;
+        Construire();
+    }
+
+    // Images decoratives : des decoupes de la maquette choisie par l'utilisateur.
+    // Tous les textes propres aux heros et leurs statistiques restent dynamiques.
+    private RectTransform IllustrationFiche(string nom, Transform parent, string ressource,
+        float x1, float y1, float x2, float y2)
+    {
+        var zone = Zone(nom, parent, x1, y1, x2, y2);
+        var image = ImageUI(zone, Color.white);
+        image.sprite = SpriteUI("Encyclopedie/" + ressource);
+        if (image.sprite == null)
+        {
+            image.sprite = SpriteUI("panneau_codex");
+            Debug.LogWarning("Ressource de la fiche manquante : " + ressource +
+                ". Lance Projet Game > Collections > Configurer images fiche V3.5.");
+        }
+        return zone;
+    }
+
+    private void BoutonFicheImage(string nom, Transform parent, string ressource,
+        Action action, float x1, float y1, float x2, float y2, bool disponible = true)
+    {
+        var zone = IllustrationFiche(nom, parent, ressource, x1, y1, x2, y2);
+        var image = zone.GetComponent<Image>();
+        image.raycastTarget = true;
+        var bouton = zone.gameObject.AddComponent<Button>();
+        bouton.targetGraphic = image;
+        bouton.interactable = disponible;
+        if (action != null) bouton.onClick.AddListener(() => action());
+    }
+
     private void RetourFichePersonnelle()
     {
-        mode = Mode.Personnelle;
+        mode = retourDepuisInfos;
         Construire();
     }
 
@@ -430,8 +492,6 @@ public class CollectionRefonteUI : MonoBehaviour
         }
         Perso p = Donnees.Persos[indexSelectionne];
         Entete("INFOS DU HÉROS", p.Nom, RetourFichePersonnelle);
-        Bouton("RetourVersFiche", racine, "‹ FICHE DU HÉROS", RetourFichePersonnelle,
-            .033f, .849f, .553f, .906f, false, 25);
         var identite = Panneau("IdentificationHeros", racine, .035f, .690f, .965f, .841f);
         var cadre = Zone("MiniPortrait", identite, .035f, .085f, .235f, .915f);
         var img = ImageUI(cadre, Color.white);
@@ -643,98 +703,141 @@ public class CollectionRefonteUI : MonoBehaviour
             24, TexteSecondaire, .05f, .014f, .95f, .062f);
     }
 
+    // Fiche immersive V3.5, inspiree exactement de la maquette bleue/or.
+    // Reservee a l'encyclopedie. La collection personnelle reste 100% V3.2.
+    // Pour le futur rendu 3D, remplacer le composant Image "HeroIllustration2D"
+    // dans "EmplacementModele3D" par une RawImage alimentee par une RenderTexture.
     private void ConstruireFicheEncyclopedie()
     {
-        if (indexSelectionne<0 || indexSelectionne>=Donnees.Persos.Length)
-            indexSelectionne=0;
-        Perso p=Donnees.Persos[indexSelectionne];
-        Entete("ENCYCLOPÉDIE", "Fiche de "+p.Nom, RetourGalerie);
+        if (indexSelectionne < 0 || indexSelectionne >= Donnees.Persos.Length)
+            indexSelectionne = 0;
 
-        var art=Panneau("FicheIllustration",racine,.03f,.489f,.514f,.849f);
-        var portrait=Zone("Illustration",art,.03f,.045f,.97f,.965f);
-        var img=ImageUI(portrait,Color.white);
-        img.sprite=SpriteUI("HeroArt/"+indexSelectionne);
-        if(img.sprite==null) img.sprite=Portrait(indexSelectionne);
-        img.preserveAspect=true;
-        var resume=Panneau("FicheStats",racine,.525f,.489f,.969f,.849f);
-        Texte("Nom",resume,p.Nom,48,Or,.05f,.795f,.95f,.975f);
-        Texte("Role",resume,p.Role+" · "+p.Rarete,28,TexteClair,
-            .05f,.675f,.95f,.79f);
-        string[] lignes={"PV    "+Stat(p,0).ToString("N0"),"ATQ   "+Stat(p,1).ToString("N0"),
-            "DEF   "+Stat(p,2).ToString("N0"),"SPD   "+p.Spd,
-            "CRIT   "+p.Crit+" %"};
-        for(int i=0;i<lignes.Length;i++)
+        Perso p = Donnees.Persos[indexSelectionne];
+
+        // 1 - Fond bleu nuit, angles dores et banniere EXACTE de la reference.
+        IllustrationFiche("FondBleuEtOr", racine, "fond_fiche", 0f, 0f, 1f, 1f);
+        IllustrationFiche("EnteteEncyclopedie", racine, "banniere_titre",
+            0f, .910f, 1f, 1f);
+        var panneauIdentite = IllustrationFiche("BannierePersonnage", racine,
+            "banniere_hero", .019f, .816f, .977f, .917f);
+
+        // Informations variables : jamais du texte incruste dans la photo.
+        var titre = Texte("NomPersonnage", panneauIdentite, p.Nom, 48, Or,
+            .085f, .45f, .855f, .88f);
+        titre.enableAutoSizing = true;
+        titre.fontSizeMin = 26;
+        titre.fontSizeMax = 48;
+        Texte("RoleEtRarete", panneauIdentite, p.Role + "  ·  " + p.Rarete, 30,
+            TexteClair, .13f, .12f, .82f, .46f);
+
+        // La croix en haut a droite est une zone de clic sur la banniere.
+        var retour = Zone("RetourGalerie", panneauIdentite,
+            .867f, .16f, .988f, .84f);
+        var cible = ImageUI(retour, new Color(1f, 1f, 1f, .015f), null, true);
+        var boutonRetour = retour.gameObject.AddComponent<Button>();
+        boutonRetour.targetGraphic = cible;
+        boutonRetour.onClick.AddListener(RetourGalerie);
+
+        // 2 - Deux boutons a gauche. Ils ouvrent les vraies pages deja existantes.
+        BoutonFicheImage("Communauté", racine, "bouton_communaute",
+            () => OuvrirInfoDepuisEncyclopedie(SousInfo.Avis),
+            .017f, .739f, .241f, .807f);
+        BoutonFicheImage("Utilisation", racine, "bouton_utilisation",
+            () => OuvrirInfoDepuisEncyclopedie(SousInfo.Utilisations),
+            .017f, .670f, .241f, .737f);
+
+        // 3 - Illustration de ce personnage, en conservant son sprite d'origine.
+        // Ce noeud accueillera plus tard le modele 3D (camera -> RenderTexture).
+        var emplacement3D = Zone("EmplacementModele3D", racine,
+            .178f, .236f, .794f, .821f);
+        var imageHero = Zone("HeroIllustration2D", emplacement3D,
+            0f, 0f, 1f, 1f);
+        var art = ImageUI(imageHero, Color.white);
+        Sprite illustration = SpriteUI("HeroArt/" + indexSelectionne);
+        art.sprite = illustration != null ? illustration : Portrait(indexSelectionne);
+        art.preserveAspect = true;
+        art.raycastTarget = false;
+        if (art.sprite == null)
+            Texte("IllustrationManquante", emplacement3D, p.Nom, 38, TexteClair,
+                .1f, .3f, .9f, .7f);
+
+        // 4 - 5 emplacements a droite : eveil, 3 competences, meneur.
+        // Toutes les images de competence sont PROVISOIRES (pas d'icones par
+        // competence dans les donnees actuelles). Les effets affiches sont reels.
+        BoutonFicheImage("EveilVerrouille", racine, "icone_eveil", null,
+            .771f, .691f, .966f, .796f, false);
+
+        string[] visuels = { "icone_skill_1", "icone_skill_2", "icone_skill_3" };
+        float[] bas = { .574f, .471f, .367f };
+        float[] haut = { .669f, .567f, .463f };
+        for (int j = 0; j < 3; j++)
         {
-            float yy=.62f-i*.108f;
-            Texte("Stat"+i,resume,lignes[i],29,TexteClair,
-                .075f,yy-.09f,.925f,yy+.01f,TextAlignmentOptions.MidlineLeft);
+            int numero = j;
+            bool existe = p.Competences != null && j < p.Competences.Length;
+            BoutonFicheImage("Competence_" + (j + 1), racine,
+                existe ? visuels[j] : "icone_vide",
+                existe ? (Action)(() => SelectionnerCompetenceEncyclopedie(numero)) : null,
+                .786f, bas[j], .954f, haut[j], existe);
         }
 
-        var tabs=Zone("TabsEncyclo",racine,.035f,.433f,.965f,.487f);
-        TabEncyclo(tabs,"INFOS",Onglet.Infos,0f,.326f);
-        TabEncyclo(tabs,"COMPÉTENCES",Onglet.Competences,.336f,.662f);
-        TabEncyclo(tabs,"UTILISATIONS",Onglet.Utilisations,.672f,1f);
-        // Page individuelle : aucun mini-portrait en bas. Retour => galerie des 15.
-        // Le panneau agrandi utilise l'espace anciennement occupe par la bande de defilement.
-        var contenu=Panneau("DetailsHeros",racine,.034f,.070f,.966f,.431f);
-        if(onglet==Onglet.Infos) DetailEncycloInfos(contenu,p);
-        else if(onglet==Onglet.Competences) DetailEncycloCompetences(contenu,p);
-        else DetailEncycloUtilisations(contenu,p);
-        Texte("Note",racine,"Statistiques de base au niveau 1 · Retour en haut à gauche pour choisir un autre héros.",
-            22,TexteSecondaire,.05f,.018f,.95f,.063f);
-    }
+        bool meneurExiste = p.Meneur != null;
+        BoutonFicheImage("Lead", racine,
+            meneurExiste ? "icone_lead" : "icone_vide",
+            meneurExiste ? (Action)SelectionnerMeneurEncyclopedie : null,
+            .772f, .239f, .965f, .350f, meneurExiste);
 
-    private void TabEncyclo(RectTransform parent,string title,Onglet cible,float x1,float x2)
-    {
-        Bouton("Onglet"+title,parent,title,()=>ChangerOnglet(cible),
-            x1,.02f,x2,.99f,onglet==cible,25);
-    }
-
-    private void DetailEncycloInfos(RectTransform z,Perso p)
-    {
-        Texte("Titre",z,"PROFIL DU PERSONNAGE",30,Or,.025f,.81f,.975f,.985f,
-            TextAlignmentOptions.MidlineLeft);
-        string role=p.Role=="Tank"?"Encaisse les attaques et sécurise l'avant-garde.":
-            p.Role=="DPS"?"Se concentre sur les dégâts infligés à l'ennemi.":
-            p.Role=="Soigneur"?"Restaure les PV de ses alliés.":
-            "Soutien polyvalent pour la composition d'équipe.";
-        Texte("Role",z,role,27,TexteClair,.045f,.45f,.955f,.81f,
-            TextAlignmentOptions.MidlineLeft);
-        Texte("Meneur",z,"PASSIF DE MENEUR : "+(p.Meneur==null?"Aucun":p.Meneur.Texte),
-            24,Or,.045f,.08f,.955f,.45f,TextAlignmentOptions.MidlineLeft);
-    }
-
-    private void DetailEncycloCompetences(RectTransform z,Perso p)
-    {
-        int nb=p.Competences==null?0:p.Competences.Length;
-        if(nb==0) { Texte("Vide",z,"Aucune compétence.",29,TexteClair,.02f,.2f,.98f,.8f); return; }
-        for(int i=0;i<nb;i++)
+        // 5 - Veritable panneau dore de la maquette : les chiffres originaux
+        // ont ete effaces de l'asset, puis remplis avec les stats JSON du heros.
+        var statistiques = IllustrationFiche("PanneauStats", racine, "panneau_stats",
+            .022f, .052f, .486f, .229f);
+        string[] valeurs =
         {
-            Competence c=p.Competences[i];
-            float h=.94f/nb;
-            float top=.97f-i*h;
-            Texte("Nom"+i,z,(i+1)+". "+c.Nom,28,Or,.045f,top-h*.46f,.955f,top,
-                TextAlignmentOptions.MidlineLeft);
-            Texte("Effet"+i,z,Description(c),24,TexteClair,.045f,top-h+.01f,.955f,top-h*.48f,
-                TextAlignmentOptions.MidlineLeft);
+            Stat(p, 0).ToString("N0"),
+            Stat(p, 1).ToString("N0"),
+            Stat(p, 2).ToString("N0"),
+            p.Spd.ToString(),
+            p.Crit + " %"
+        };
+        float[] centre = { .798f, .625f, .453f, .278f, .108f };
+        for (int i = 0; i < valeurs.Length; i++)
+        {
+            Texte("Valeur" + i, statistiques, valeurs[i], 37, TexteClair,
+                .650f, centre[i] - .08f, .94f, centre[i] + .08f,
+                TextAlignmentOptions.MidlineRight);
+        }
+
+        // 6 - Pop-up de details : absente par defaut comme sur la reference.
+        if (afficherDescriptionCompetence && p.Competences != null &&
+            indexCompetence >= 0 && indexCompetence < p.Competences.Length)
+        {
+            Competence c = p.Competences[indexCompetence];
+            var popup = Panneau("DetailsCompetence", racine,
+                .275f, .292f, .765f, .500f);
+            Texte("NomCompetence", popup, c.Nom, 29, Or,
+                .05f, .64f, .95f, .91f);
+            Texte("DescriptionCompetence", popup, Description(c), 24, TexteClair,
+                .07f, .20f, .93f, .66f);
+            Bouton("FermerDetails", popup, "FERMER",
+                () => { afficherDescriptionCompetence = false; Construire(); },
+                .30f, .035f, .70f, .19f, false, 20);
+        }
+        else if (afficherDescriptionMeneur && p.Meneur != null)
+        {
+            var popup = Panneau("DetailsMeneur", racine,
+                .275f, .292f, .765f, .500f);
+            Texte("TitreMeneur", popup, "TALENT DE MENEUR", 29, Or,
+                .05f, .64f, .95f, .91f);
+            Texte("EffetMeneur", popup, p.Meneur.Texte, 23, TexteClair,
+                .07f, .19f, .93f, .68f);
+            Bouton("FermerDetails", popup, "FERMER",
+                () => { afficherDescriptionMeneur = false; Construire(); },
+                .30f, .035f, .70f, .19f, false, 20);
         }
     }
 
-    private void DetailEncycloUtilisations(RectTransform z,Perso p)
-    {
-        string conseil;
-        switch(p.Role)
-        {
-            case "Tank": conseil="Histoire et donjons : utile pour encaisser les coups.";break;
-            case "DPS": conseil="Histoire et arène : utile pour infliger des dégâts.";break;
-            case "Soigneur": conseil="Donjons et combats longs : aide à maintenir l'équipe.";break;
-            default: conseil="Équipes mixtes : soutien complémentaire selon les compétences.";break;
-        }
-        Texte("Titre",z,"UTILISATIONS PRINCIPALES",32,Or,.035f,.77f,.965f,.98f);
-        Texte("Description",z,conseil,29,TexteClair,.045f,.34f,.955f,.78f);
-        Texte("Prudence",z,"Conseil indicatif selon le rôle, à confirmer par les tests d'équilibrage.",
-            23,TexteSecondaire,.045f,.05f,.955f,.34f);
-    }
+
+
+
 
 
 }
