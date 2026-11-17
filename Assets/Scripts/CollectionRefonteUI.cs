@@ -954,14 +954,25 @@ public class CollectionRefonteUI : MonoBehaviour
         float[] centre = { .735f, .582f, .430f, .278f, .126f };
         for (int i = 0; i < valeurs.Length; i++)
         {
+            // V3.5.9 : lignes assez hautes pour la police TMP.
+            // Sans cela, TextMeshPro masque le texte (mode Ellipsis) et
+            // affiche des avertissements sur la police LiberationSans SDF.
             var label = Texte("LibelleStat_" + i, statistiques,
-                etiquettes[i], 34, Or,
-                .125f, centre[i] - .052f, .51f, centre[i] + .052f,
+                etiquettes[i], 30, Or,
+                .125f, centre[i] - .072f, .52f, centre[i] + .072f,
                 TextAlignmentOptions.MidlineLeft);
             label.fontStyle = FontStyles.Bold;
-            Texte("Valeur" + i, statistiques, valeurs[i], 36, TexteClair,
-                .545f, centre[i] - .052f, .935f, centre[i] + .052f,
+            label.enableWordWrapping = false;
+            label.overflowMode = TextOverflowModes.Overflow;
+            label.margin = Vector4.zero;
+
+            var valeur = Texte("Valeur" + i, statistiques,
+                valeurs[i], 31, TexteClair,
+                .54f, centre[i] - .072f, .935f, centre[i] + .072f,
                 TextAlignmentOptions.MidlineRight);
+            valeur.enableWordWrapping = false;
+            valeur.overflowMode = TextOverflowModes.Overflow;
+            valeur.margin = Vector4.zero;
 
             if (i < valeurs.Length - 1)
             {
