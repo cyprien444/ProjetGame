@@ -298,45 +298,76 @@ public class CollectionRefonteUI : MonoBehaviour
         return zone;
     }
 
-    // V3.5.6 : contour dore robuste, construit avec des Image UGUI ordinaires.
-    // Chaque face est un rectangle horizontal/vertical ancre au bord exact
-    // de l'emplacement. Cela fonctionne sans shader, sprite ou Mesh personnalise.
-    // Les trois competences emploient exactement la meme fonction et les
-    // memes coordonnees : largeur/hauteur assurees par ConstruireFicheEncyclopedie.
+    // V3.5.7 : mêmes emplacements qu'en V3.5.6, mais coins biseautés.
+    // Bordures réalisées avec des Image UGUI transparentes au centre,
+    // sans PNG, sans shader et sans modifier les boutons ni leurs positions.
     private void DessinerCadreAvecImagesUnity(RectTransform parent)
     {
-        AjouterCoucheCadre(parent, "Ombre", 2f, 10f,
+        AjouterCoucheCadreBiseaute(parent, "Ombre", 2f, 10f, 22f,
             new Color(0.22f, 0.13f, 0.055f, 0.97f));
-        AjouterCoucheCadre(parent, "Or", 3.5f, 6f,
+        AjouterCoucheCadreBiseaute(parent, "Or", 3.5f, 6f, 20f,
             new Color(0.83f, 0.57f, 0.22f, 1f));
-        AjouterCoucheCadre(parent, "Reflet", 4.5f, 1.8f,
+        AjouterCoucheCadreBiseaute(parent, "Reflet", 4.5f, 1.8f, 19f,
             new Color(1f, 0.88f, 0.58f, 1f));
-        AjouterCoucheCadre(parent, "LiseréInterieur", 10f, 1.5f,
+        AjouterCoucheCadreBiseaute(parent, "LisereInterieur", 10f, 1.5f, 24f,
             new Color(0.58f, 0.36f, 0.13f, 0.90f));
     }
 
-    private void AjouterCoucheCadre(RectTransform parent, string nom,
-        float marge, float epaisseur, Color teinte)
+    // Les tailles sont en pixels du Canvas (pas en coordonnées 0..1).
+    // Les 4 côtés sont ancrés, les 4 diagonales sont ancrées aux coins :
+    // l'ensemble s'adapte sans lire parent.rect, même au premier rendu.
+    private void AjouterCoucheCadreBiseaute(RectTransform parent, string nom,
+        float marge, float epaisseur, float chanfrein, Color teinte)
     {
-        // Ordre volontaire : les quatre segments appartiennent au meme parent.
-        // Toutes les mesures sont en pixels UI, et la longueur s'adapte
-        // automatiquement a chaque emplacement avec des ancres étirées.
         AjouterBandeCadre(parent, nom + "_Haut",
             new Vector2(0f, 1f), new Vector2(1f, 1f),
-            new Vector2(.5f, 1f), new Vector2(-2f * marge, epaisseur),
+            new Vector2(.5f, .5f), new Vector2(-2f * chanfrein, epaisseur),
             new Vector2(0f, -marge), teinte);
         AjouterBandeCadre(parent, nom + "_Bas",
             new Vector2(0f, 0f), new Vector2(1f, 0f),
-            new Vector2(.5f, 0f), new Vector2(-2f * marge, epaisseur),
+            new Vector2(.5f, .5f), new Vector2(-2f * chanfrein, epaisseur),
             new Vector2(0f, marge), teinte);
         AjouterBandeCadre(parent, nom + "_Gauche",
             new Vector2(0f, 0f), new Vector2(0f, 1f),
-            new Vector2(0f, .5f), new Vector2(epaisseur, -2f * marge),
+            new Vector2(.5f, .5f), new Vector2(epaisseur, -2f * chanfrein),
             new Vector2(marge, 0f), teinte);
         AjouterBandeCadre(parent, nom + "_Droite",
             new Vector2(1f, 0f), new Vector2(1f, 1f),
-            new Vector2(1f, .5f), new Vector2(epaisseur, -2f * marge),
+            new Vector2(.5f, .5f), new Vector2(epaisseur, -2f * chanfrein),
             new Vector2(-marge, 0f), teinte);
+
+        float centreCoin = (marge + chanfrein) * .5f;
+        float longueur = (chanfrein - marge) * Mathf.Sqrt(2f);
+        AjouterDiagonaleCadre(parent, nom + "_CoinHG",
+            new Vector2(0f, 1f), new Vector2(centreCoin, -centreCoin),
+            longueur, epaisseur, 45f, teinte);
+        AjouterDiagonaleCadre(parent, nom + "_CoinHD",
+            new Vector2(1f, 1f), new Vector2(-centreCoin, -centreCoin),
+            longueur, epaisseur, -45f, teinte);
+        AjouterDiagonaleCadre(parent, nom + "_CoinBG",
+            new Vector2(0f, 0f), new Vector2(centreCoin, centreCoin),
+            longueur, epaisseur, -45f, teinte);
+        AjouterDiagonaleCadre(parent, nom + "_CoinBD",
+            new Vector2(1f, 0f), new Vector2(-centreCoin, centreCoin),
+            longueur, epaisseur, 45f, teinte);
+    }
+
+    private void AjouterDiagonaleCadre(RectTransform parent, string nom,
+        Vector2 coinAncre, Vector2 decalage, float longueur,
+        float epaisseur, float angle, Color teinte)
+    {
+        var objet = new GameObject(nom, typeof(RectTransform));
+        objet.transform.SetParent(parent, false);
+        var rt = objet.GetComponent<RectTransform>();
+        rt.anchorMin = coinAncre;
+        rt.anchorMax = coinAncre;
+        rt.pivot = new Vector2(.5f, .5f);
+        rt.sizeDelta = new Vector2(longueur, epaisseur);
+        rt.anchoredPosition = decalage;
+        rt.localRotation = Quaternion.Euler(0f, 0f, angle);
+        var image = objet.AddComponent<Image>();
+        image.color = teinte;
+        image.raycastTarget = false;
     }
 
     private void AjouterBandeCadre(RectTransform parent, string nom,
