@@ -264,12 +264,39 @@ public class CollectionRefonteUI : MonoBehaviour
     {
         var zone = Zone(nom, parent, x1, y1, x2, y2);
         var image = ImageUI(zone, Color.white);
-        image.sprite = SpriteUI("Encyclopedie/" + ressource);
-        if (image.sprite == null)
+
+        // V3.5.4 : les cadres des statistiques et de la colonne de droite
+        // sont dessines par Unity, et non etires depuis un PNG.
+        // Cela garantit quatre cotes visibles et un rendu identique pour les
+        // trois competences, meme si des sprites importes sont mal decoupes.
+        bool estCadre = ressource == "panneau_stats" ||
+                        ressource == "icone_eveil" ||
+                        ressource == "icone_lead" ||
+                        ressource == "icone_vide" ||
+                        ressource == "icone_skill_1" ||
+                        ressource == "icone_skill_2" ||
+                        ressource == "icone_skill_3";
+        if (estCadre)
         {
-            image.sprite = SpriteUI("panneau_codex");
-            Debug.LogWarning("Ressource de la fiche manquante : " + ressource +
-                ". Lance Projet Game > Collections > Configurer images fiche V3.5.");
+            // L'Image de base reste presente : les boutons fonctionnent.
+            // Le cadre dessine en enfant ne capte jamais les clics.
+            image.sprite = null;
+            image.color = Color.clear;
+            var trait = Zone("ContourDore", zone, 0f, 0f, 1f, 1f);
+            var contour = trait.gameObject.AddComponent<ContourDoreUI>();
+            contour.raycastTarget = false;
+        }
+        else
+        {
+            // Aucun changement : fond, bannieres, Communaute et Utilisation
+            // conservent leurs images, texte, fond bleu et boutons d'origine.
+            image.sprite = SpriteUI("Encyclopedie/" + ressource);
+            if (image.sprite == null)
+            {
+                image.sprite = SpriteUI("panneau_codex");
+                Debug.LogWarning("Ressource de la fiche manquante : " + ressource +
+                    ". Lance Projet Game > Collections > Configurer images fiche V3.5.");
+            }
         }
         return zone;
     }
@@ -769,7 +796,8 @@ public class CollectionRefonteUI : MonoBehaviour
 
         string[] visuels = { "icone_skill_1", "icone_skill_2", "icone_skill_3" };
         float[] bas = { .574f, .471f, .367f };
-        float[] haut = { .669f, .567f, .463f };
+        // Trois cases strictement de meme largeur ET de meme hauteur.
+        const float hauteurCompetence = .096f;
         for (int j = 0; j < 3; j++)
         {
             int numero = j;
@@ -777,7 +805,7 @@ public class CollectionRefonteUI : MonoBehaviour
             BoutonFicheImage("Competence_" + (j + 1), racine,
                 existe ? visuels[j] : "icone_vide",
                 existe ? (Action)(() => SelectionnerCompetenceEncyclopedie(numero)) : null,
-                .786f, bas[j], .954f, haut[j], existe);
+                .786f, bas[j], .954f, bas[j] + hauteurCompetence, existe);
         }
 
         bool meneurExiste = p.Meneur != null;
