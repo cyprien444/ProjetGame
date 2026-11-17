@@ -816,6 +816,39 @@ public class CollectionRefonteUI : MonoBehaviour
             24, TexteSecondaire, .05f, .014f, .95f, .062f);
     }
 
+    // Fermeture de la fiche : fond bleu nuit propre, bordure doree biseautee,
+    // deux diagonales UGUI pour la croix. Aucun caractère spécial / sprite requis.
+    private void ConstruireCroixRetourEncyclopedie(RectTransform banniere)
+    {
+        var zone = Zone("RetourGalerie", banniere,
+            .885f, .218f, .976f, .782f);
+        var fond = ImageUI(zone, new Color(.046f, .072f, .119f, 1f), null, true);
+        var bouton = zone.gameObject.AddComponent<Button>();
+        bouton.targetGraphic = fond;
+        bouton.onClick.AddListener(RetourGalerie);
+        var teintes = bouton.colors;
+        teintes.normalColor = Color.white;
+        teintes.highlightedColor = new Color(1f, .98f, .89f, 1f);
+        teintes.pressedColor = new Color(.78f, .83f, .94f, 1f);
+        bouton.colors = teintes;
+
+        // Réutilise exactement le même dessin de contour que les autres cadres.
+        DessinerCadreAvecImagesUnity(zone);
+
+        // Ombre discrète puis deux branches dorées, dessinées directement en UI.
+        var centre = new Vector2(.5f, .5f);
+        var ombre = new Color(.20f, .105f, .025f, .95f);
+        var lumiere = new Color(1f, .88f, .56f, 1f);
+        AjouterDiagonaleCadre(zone, "CroixOmbre1", centre,
+            new Vector2(0f, -2f), 43f, 11f, 45f, ombre);
+        AjouterDiagonaleCadre(zone, "CroixOmbre2", centre,
+            new Vector2(0f, -2f), 43f, 11f, -45f, ombre);
+        AjouterDiagonaleCadre(zone, "CroixOr1", centre,
+            Vector2.zero, 43f, 7.5f, 45f, lumiere);
+        AjouterDiagonaleCadre(zone, "CroixOr2", centre,
+            Vector2.zero, 43f, 7.5f, -45f, lumiere);
+    }
+
     // Fiche immersive V3.5, inspiree exactement de la maquette bleue/or.
     // Reservee a l'encyclopedie. La collection personnelle reste 100% V3.2.
     // Pour le futur rendu 3D, remplacer le composant Image "HeroIllustration2D"
@@ -843,13 +876,9 @@ public class CollectionRefonteUI : MonoBehaviour
         Texte("RoleEtRarete", panneauIdentite, p.Role + "  ·  " + p.Rarete, 30,
             TexteClair, .13f, .12f, .82f, .46f);
 
-        // La croix en haut a droite est une zone de clic sur la banniere.
-        var retour = Zone("RetourGalerie", panneauIdentite,
-            .867f, .16f, .988f, .84f);
-        var cible = ImageUI(retour, new Color(1f, 1f, 1f, .015f), null, true);
-        var boutonRetour = retour.gameObject.AddComponent<Button>();
-        boutonRetour.targetGraphic = cible;
-        boutonRetour.onClick.AddListener(RetourGalerie);
+        // Bouton de fermeture entierement construit en UGUI.
+        // La banniere PNG livree ne contient plus l'ancienne croix incrustee.
+        ConstruireCroixRetourEncyclopedie(panneauIdentite);
 
         // 2 - Deux boutons a gauche. Ils ouvrent les vraies pages deja existantes.
         BoutonFicheImage("Communauté", racine, "bouton_communaute",
@@ -912,12 +941,34 @@ public class CollectionRefonteUI : MonoBehaviour
             p.Spd.ToString(),
             p.Crit + " %"
         };
-        float[] centre = { .798f, .625f, .453f, .278f, .108f };
+        // Titre et lignes entierement dynamiques (plus de valeurs sans legendes).
+        var titreStatistiques = Texte("TitreStatistiques", statistiques,
+            "STATISTIQUES", 28, Or,
+            .09f, .837f, .91f, .970f, TextAlignmentOptions.Center);
+        titreStatistiques.fontStyle = FontStyles.Bold;
+        var traitTitre = Zone("SeparateurTitre", statistiques,
+            .100f, .817f, .900f, .823f);
+        ImageUI(traitTitre, new Color(.93f, .73f, .37f, .45f));
+
+        string[] etiquettes = { "PV", "ATQ", "DEF", "SPD", "CRIT" };
+        float[] centre = { .735f, .582f, .430f, .278f, .126f };
         for (int i = 0; i < valeurs.Length; i++)
         {
-            Texte("Valeur" + i, statistiques, valeurs[i], 37, TexteClair,
-                .650f, centre[i] - .08f, .94f, centre[i] + .08f,
+            var label = Texte("LibelleStat_" + i, statistiques,
+                etiquettes[i], 34, Or,
+                .125f, centre[i] - .052f, .51f, centre[i] + .052f,
+                TextAlignmentOptions.MidlineLeft);
+            label.fontStyle = FontStyles.Bold;
+            Texte("Valeur" + i, statistiques, valeurs[i], 36, TexteClair,
+                .545f, centre[i] - .052f, .935f, centre[i] + .052f,
                 TextAlignmentOptions.MidlineRight);
+
+            if (i < valeurs.Length - 1)
+            {
+                var separateur = Zone("SeparateurStat_" + i, statistiques,
+                    .115f, centre[i] - .078f, .885f, centre[i] - .074f);
+                ImageUI(separateur, new Color(.88f, .68f, .35f, .29f));
+            }
         }
 
         // 6 - Pop-up de details : absente par defaut comme sur la reference.
