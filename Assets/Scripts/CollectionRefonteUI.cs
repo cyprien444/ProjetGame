@@ -900,6 +900,243 @@ public class CollectionRefonteUI : MonoBehaviour
             Vector2.zero, 43f, 7.5f, -45f, lumiere);
     }
 
+    // ---- V3.6.1 : DEUX BOUTONS LATERAUX ENTIÈREMENT DYNAMIQUES ----
+    // Fond bleu lumineux + contour dore COMPLET + icone + texte independants.
+    // La forme asymetrique est differente des cases Skills / Eveil / Lead.
+    // Aucune image decoupee, aucune nouvelle ressource externe necessaire.
+    private static Sprite visuelBoutonLateral;
+    private static Sprite iconeCommunaute;
+    private static Sprite iconeUtilisation;
+
+    private void ConstruireBoutonLateralEncyclo(string nom, RectTransform parent,
+        string libelle, bool estCommunaute, Action action,
+        float xMin, float yMin, float xMax, float yMax)
+    {
+        var zone = Zone(nom, parent, xMin, yMin, xMax, yMax);
+        var fond = ImageUI(zone, Color.white);
+        fond.sprite = ObtenirVisuelBoutonLateral();
+        fond.type = Image.Type.Simple;
+        fond.preserveAspect = false;
+        fond.raycastTarget = true;
+
+        var bouton = zone.gameObject.AddComponent<Button>();
+        bouton.targetGraphic = fond;
+        if (action != null) bouton.onClick.AddListener(() => action());
+
+        // Effet au survol / pression : le sprite ne change jamais de taille.
+        var couleurs = bouton.colors;
+        couleurs.normalColor = Color.white;
+        couleurs.highlightedColor = new Color(1f, .98f, .90f, 1f);
+        couleurs.pressedColor = new Color(.76f, .85f, 1f, 1f);
+        couleurs.fadeDuration = .12f;
+        bouton.colors = couleurs;
+
+        // Pictogramme dore (sans fond) dans la partie superieure.
+        var zoneIcone = Zone("Pictogramme", zone, .34f, .47f, .66f, .88f);
+        var imageIcone = ImageUI(zoneIcone, Color.white);
+        imageIcone.sprite = ObtenirIconeBoutonLateral(estCommunaute);
+        imageIcone.preserveAspect = true;
+        imageIcone.raycastTarget = false;
+
+        // Texte reel, modifiable, independant du contour et du pictogramme.
+        var texte = Texte("Libelle", zone, libelle, 24, Or,
+            .035f, .105f, .965f, .47f, TextAlignmentOptions.Center);
+        texte.fontStyle = FontStyles.Bold;
+        texte.enableAutoSizing = true;
+        texte.fontSizeMin = 16;
+        texte.fontSizeMax = 24;
+        texte.overflowMode = TextOverflowModes.Overflow;
+        texte.margin = Vector4.zero;
+        texte.raycastTarget = false;
+    }
+
+    // Sprite procedural : coins biseautes asymetriques, fond bleu conserve,
+    // leger eclat en haut a gauche, or metallique, pixels EXTERIEURS transparents.
+    // Le sprite est genere UNE fois puis reutilise par les deux boutons.
+    private static Sprite ObtenirVisuelBoutonLateral()
+    {
+        if (visuelBoutonLateral != null) return visuelBoutonLateral;
+
+        const int largeur = 384;
+        const int hauteur = 208;
+        var tex = new Texture2D(largeur, hauteur, TextureFormat.RGBA32, false);
+        tex.name = "BoutonLateralEncyclopedie_BleuOr";
+        tex.wrapMode = TextureWrapMode.Clamp;
+        tex.filterMode = FilterMode.Bilinear;
+
+        // Forme propre : coins differents des cadres de competences.
+        // Tous les points sont A L'INTERIEUR du PNG, y compris le cote droit.
+        Vector2[] polygone = {
+            new Vector2(.014f, .16f),
+            new Vector2(.077f, .025f),
+            new Vector2(.927f, .025f),
+            new Vector2(.986f, .13f),
+            new Vector2(.986f, .845f),
+            new Vector2(.916f, .975f),
+            new Vector2(.108f, .975f),
+            new Vector2(.014f, .855f)
+        };
+        var pixels = new Color[largeur * hauteur];
+        for (int y = 0; y < hauteur; y++)
+        {
+            for (int x = 0; x < largeur; x++)
+            {
+                var uv = new Vector2((x + .5f) / largeur, (y + .5f) / hauteur);
+                if (!DansPolygone(uv, polygone))
+                {
+                    pixels[y * largeur + x] = Color.clear;
+                    continue;
+                }
+
+                float bord = DistanceBordPolygone(uv, polygone, largeur, hauteur);
+                float illumination = Mathf.Exp(-Mathf.Pow((uv.x - .22f) / .40f, 2f)
+                    - Mathf.Pow((uv.y - .88f) / .35f, 2f));
+                float melangeBleu = Mathf.Clamp01(.22f + uv.y * .45f + illumination * .40f);
+                Color teinte = Color.Lerp(
+                    new Color(.026f, .055f, .122f, 1f),
+                    new Color(.16f, .30f, .49f, 1f), melangeBleu);
+
+                // Or a quatre niveaux : bronze exterieur / reflet / liseré /
+                // ombre interieure. Aucun bord n'est emprunte a une photo.
+                if (bord < 1.8f)
+                    teinte = new Color(.37f, .21f, .065f, 1f);
+                else if (bord < 4.8f)
+                    teinte = Color.Lerp(new Color(.77f, .48f, .17f, 1f),
+                        new Color(1f, .88f, .55f, 1f),
+                        Mathf.Clamp01(.33f + uv.y * .50f + illumination * .25f));
+                else if (bord < 6.8f)
+                    teinte = new Color(.30f, .175f, .070f, 1f);
+                else if (bord < 8.5f)
+                    teinte = new Color(.92f, .70f, .37f, 1f);
+                else if (bord < 11.2f)
+                    teinte = Color.Lerp(teinte, new Color(.24f, .19f, .14f, 1f), .45f);
+
+                // Contour antialiasé, transparent UNIQUEMENT en dehors.
+                if (bord < 1.05f)
+                    teinte.a = Mathf.Clamp01((bord + .15f) / 1.20f);
+                pixels[y * largeur + x] = teinte;
+            }
+        }
+        tex.SetPixels(pixels);
+        tex.Apply(false, false);
+        visuelBoutonLateral = Sprite.Create(tex,
+            new Rect(0f, 0f, largeur, hauteur), new Vector2(.5f, .5f), 100f);
+        visuelBoutonLateral.name = "BoutonLateralBleuOr";
+        return visuelBoutonLateral;
+    }
+
+    // Petits pictogrammes dorés dessines localement, sans police speciale.
+    // « Communauté » = trois silhouettes ; « Utilisation » = livre ouvert.
+    private static Sprite ObtenirIconeBoutonLateral(bool estCommunaute)
+    {
+        if (estCommunaute && iconeCommunaute != null) return iconeCommunaute;
+        if (!estCommunaute && iconeUtilisation != null) return iconeUtilisation;
+
+        const int largeur = 120;
+        const int hauteur = 74;
+        var tex = new Texture2D(largeur, hauteur, TextureFormat.RGBA32, false);
+        tex.wrapMode = TextureWrapMode.Clamp;
+        tex.filterMode = FilterMode.Bilinear;
+        tex.name = estCommunaute ? "IconeCommunauteOr" : "IconeLivreOr";
+        // Forme du livre initialisee une fois, et non pour chaque pixel.
+        var pageGauche = new Vector2[] {
+            new Vector2(.10f, .17f), new Vector2(.45f, .24f),
+            new Vector2(.49f, .20f), new Vector2(.49f, .80f),
+            new Vector2(.29f, .88f), new Vector2(.10f, .80f)
+        };
+        var pageDroite = new Vector2[] {
+            new Vector2(.51f, .20f), new Vector2(.55f, .24f),
+            new Vector2(.90f, .17f), new Vector2(.90f, .80f),
+            new Vector2(.71f, .88f), new Vector2(.51f, .80f)
+        };
+        var pixels = new Color[largeur * hauteur];
+        for (int y = 0; y < hauteur; y++)
+        {
+            for (int x = 0; x < largeur; x++)
+            {
+                float u = (x + .5f) / largeur;
+                float v = (y + .5f) / hauteur;
+                bool dessiner;
+                if (estCommunaute)
+                {
+                    bool tetes = DansEllipse(u, v, .26f, .67f, .105f, .18f)
+                        || DansEllipse(u, v, .50f, .76f, .12f, .19f)
+                        || DansEllipse(u, v, .74f, .67f, .105f, .18f);
+                    bool silhouettes = DansEllipse(u, v, .26f, .19f, .19f, .24f)
+                        || DansEllipse(u, v, .74f, .19f, .19f, .24f)
+                        || DansEllipse(u, v, .50f, .20f, .235f, .285f);
+                    dessiner = tetes || silhouettes;
+                }
+                else
+                {
+                    // Pages du livre, bordure d'or, interieur bleu fonce.
+                    bool dansGauche = DansPolygone(new Vector2(u, v), pageGauche);
+                    bool dansDroite = DansPolygone(new Vector2(u, v), pageDroite);
+                    float distanceGauche = DistanceBordPolygone(new Vector2(u,v), pageGauche,
+                        largeur, hauteur);
+                    float distanceDroite = DistanceBordPolygone(new Vector2(u,v), pageDroite,
+                        largeur, hauteur);
+                    bool cadreLivre = (dansGauche && distanceGauche < 5.0f)
+                        || (dansDroite && distanceDroite < 5.0f);
+                    bool tranche = (Mathf.Abs(u - .50f) < .022f && v > .11f && v < .83f);
+                    dessiner = cadreLivre || tranche;
+                }
+                pixels[y * largeur + x] = dessiner
+                    ? new Color(.98f, Mathf.Lerp(.62f, .85f, v), .33f, 1f)
+                    : Color.clear;
+            }
+        }
+        tex.SetPixels(pixels);
+        tex.Apply(false, false);
+        var sprite = Sprite.Create(tex, new Rect(0f, 0f, largeur, hauteur),
+            new Vector2(.5f, .5f), 100f);
+        sprite.name = tex.name;
+        if (estCommunaute) iconeCommunaute = sprite;
+        else iconeUtilisation = sprite;
+        return sprite;
+    }
+
+    private static bool DansEllipse(float x, float y, float centreX, float centreY,
+        float rayonX, float rayonY)
+    {
+        float dx = (x - centreX) / rayonX;
+        float dy = (y - centreY) / rayonY;
+        return dx * dx + dy * dy <= 1f;
+    }
+
+    private static bool DansPolygone(Vector2 position, Vector2[] polygone)
+    {
+        bool dedans = false;
+        for (int i = 0, j = polygone.Length - 1; i < polygone.Length; j = i++)
+        {
+            Vector2 a = polygone[i];
+            Vector2 b = polygone[j];
+            if ((a.y > position.y) != (b.y > position.y) &&
+                position.x < (b.x - a.x) * (position.y - a.y) / (b.y - a.y) + a.x)
+                dedans = !dedans;
+        }
+        return dedans;
+    }
+
+    private static float DistanceBordPolygone(Vector2 position, Vector2[] polygone,
+        int largeur, int hauteur)
+    {
+        Vector2 point = new Vector2(position.x * largeur, position.y * hauteur);
+        float minimum = float.MaxValue;
+        for (int i = 0; i < polygone.Length; i++)
+        {
+            Vector2 a = new Vector2(polygone[i].x * largeur,
+                polygone[i].y * hauteur);
+            Vector2 b = new Vector2(polygone[(i + 1) % polygone.Length].x * largeur,
+                polygone[(i + 1) % polygone.Length].y * hauteur);
+            Vector2 ab = b - a;
+            float projection = Mathf.Clamp01(Vector2.Dot(point - a, ab) / ab.sqrMagnitude);
+            float distance = Vector2.Distance(point, a + ab * projection);
+            if (distance < minimum) minimum = distance;
+        }
+        return minimum;
+    }
+
     // Fiche immersive V3.5, inspiree exactement de la maquette bleue/or.
     // Reservee a l'encyclopedie. La collection personnelle reste 100% V3.2.
     // Pour le futur rendu 3D, remplacer le composant Image "HeroIllustration2D"
@@ -932,10 +1169,12 @@ public class CollectionRefonteUI : MonoBehaviour
         ConstruireCroixRetourEncyclopedie(panneauIdentite);
 
         // 2 - Deux boutons a gauche. Ils ouvrent les vraies pages deja existantes.
-        BoutonFicheImage("Communauté", racine, "bouton_communaute",
+        // V3.6.1 : boutons entièrement construits dans Unity UI :
+        // même placement, aucun bord découpé, aucun fond parasite.
+        ConstruireBoutonLateralEncyclo("Communauté", racine, "COMMUNAUTÉ", true,
             () => OuvrirInfoDepuisEncyclopedie(SousInfo.Avis),
             .017f, .739f, .241f, .807f);
-        BoutonFicheImage("Utilisation", racine, "bouton_utilisation",
+        ConstruireBoutonLateralEncyclo("Utilisation", racine, "UTILISATION", false,
             () => OuvrirInfoDepuisEncyclopedie(SousInfo.Utilisations),
             .017f, .670f, .241f, .737f);
 
