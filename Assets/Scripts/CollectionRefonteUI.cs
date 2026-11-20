@@ -575,6 +575,10 @@ public class CollectionRefonteUI : MonoBehaviour
         Bouton("Informations", scene, "ⓘ INFOS", OuvrirInfoPersonnage,
             .027f, .875f, .365f, .978f, true, 26);
 
+        // ETAPE 8.6 : statut de progression du personnage possede (lecture seule).
+        // Ne modifie pas les statistiques, les combats ou la sauvegarde.
+        AjouterProgressionPersonnelle(scene, indexSelectionne);
+
         var stats = Panneau("StatsBase", scene, .030f, .047f, .57f, .405f);
         Texte("TitreStats", stats, "STATISTIQUES DE BASE", 25, Or,
             .035f, .83f, .96f, .98f, TextAlignmentOptions.MidlineLeft);
@@ -622,6 +626,61 @@ public class CollectionRefonteUI : MonoBehaviour
             .115f, .025f, .885f, .139f, false, 24, false);
         Texte("EveilNote", competences, "À VENIR", 18, TexteSecondaire,
             .025f, .148f, .975f, .187f);
+    }
+
+    // ETAPE 8.6 : affiche dans MES HEROS le niveau, les etoiles et la barre d'XP.
+    // La lecture des donnees est realisee par ProgressionHeros.Lire(index).
+    // La jauge est informative : aucun achat, promotion ou gain d'XP ici.
+    private void AjouterProgressionPersonnelle(RectTransform scene, int index)
+    {
+        EtatProgressionHero etat = ProgressionHeros.Lire(index);
+        if (etat == null) return;
+
+        int plafond = ProgressionHeros.PlafondNiveau(etat.Etoiles);
+        bool bloque = etat.Niveau >= plafond;
+        int xpSuivante = bloque ? 0 : ProgressionHeros.XpPourNiveauSuivant(etat.Niveau);
+        float remplissage = (!bloque && xpSuivante > 0)
+            ? Mathf.Clamp01((float)etat.Experience / xpSuivante) : 0f;
+
+        // Zone en haut a droite de la fiche, sans chevaucher le bouton INFOS.
+        var panneau = Panneau("ProgressionDuHero", scene,
+            .400f, .838f, .972f, .972f);
+
+        var niveau = Texte("NiveauActuel", panneau,
+            "NIVEAU " + etat.Niveau + " / " + plafond, 23, Or,
+            .055f, .620f, .580f, .955f, TextAlignmentOptions.MidlineLeft);
+        niveau.fontStyle = FontStyles.Bold;
+        niveau.enableWordWrapping = false;
+        niveau.overflowMode = TextOverflowModes.Overflow;
+
+        var etoiles = Texte("EtoilesActuelles", panneau,
+            "ETOILES " + etat.Etoiles + " / 5", 21, TexteClair,
+            .570f, .620f, .960f, .955f, TextAlignmentOptions.MidlineRight);
+        etoiles.enableWordWrapping = false;
+        etoiles.overflowMode = TextOverflowModes.Overflow;
+
+        string legendeXp = bloque
+            ? "XP BLOQUEE - PROMOTION NECESSAIRE"
+            : "XP  " + etat.Experience.ToString("N0") + " / " + xpSuivante.ToString("N0");
+        var xp = Texte("ExperienceActuelle", panneau, legendeXp, 20, TexteClair,
+            .060f, .330f, .940f, .635f, TextAlignmentOptions.Center);
+        xp.enableWordWrapping = false;
+        xp.overflowMode = TextOverflowModes.Overflow;
+        xp.enableAutoSizing = true;
+        xp.fontSizeMin = 15;
+        xp.fontSizeMax = 20;
+
+        // Fond et remplissage independants du texte ; barre toujours dans le panneau.
+        var fondJauge = Zone("FondJaugeXP", panneau, .060f, .155f, .940f, .265f);
+        var fondImage = ImageUI(fondJauge, new Color(.075f, .110f, .185f, 1f));
+        fondImage.raycastTarget = false;
+        if (remplissage > 0f)
+        {
+            var progression = Zone("RemplissageXP", fondJauge,
+                0f, 0f, remplissage, 1f);
+            var imageProgression = ImageUI(progression, new Color(.94f, .72f, .33f, 1f));
+            imageProgression.raycastTarget = false;
+        }
     }
 
     // La page d'information est preparee. Les avis et tendances demanderont plus tard
