@@ -23,7 +23,7 @@ public class CollectionRefonteUI : MonoBehaviour
     private static readonly Color Card = new Color(0.075f, 0.12f, 0.21f, 0.95f);
 
     private Mode mode = Mode.Personnelle;
-    private Onglet onglet = Onglet.Equipements;
+    private Onglet onglet = Onglet.Infos;
     private int indexSelectionne = -1;
     private int indexCompetence = 0;
     // Fiche encyclopedie : un panneau d'explication n'apparait qu'au clic.
@@ -211,7 +211,7 @@ public class CollectionRefonteUI : MonoBehaviour
     {
         RetenirDefilement();
         mode = Mode.Personnelle;
-        onglet = Onglet.Equipements;
+        onglet = Onglet.Infos;
         var possedes = ListePossedee();
         if (!possedes.Contains(indexSelectionne))
             indexSelectionne = possedes.Count > 0 ? possedes[0] : -1;
@@ -502,7 +502,7 @@ public class CollectionRefonteUI : MonoBehaviour
                 0f, .015f, 1f, .23f);
     }
 
-    // V8.8 : bande compacte de portraits, sans compteur de collection.
+    // V8.9 : bande compacte de portraits, sans compteur et sans noms.
     // L'Encyclopedie reste independante du defilement des heros possedes.
     private void BandeMesHerosEnBas(Transform parent)
     {
@@ -522,8 +522,8 @@ public class CollectionRefonteUI : MonoBehaviour
         viewport.gameObject.AddComponent<RectMask2D>();
         RectTransform contenu = Zone("PortraitsPossedes", viewport, 0f, 0f, 0f, 1f);
         contenu.pivot = new Vector2(0f, .5f);
-        const float largeurCase = 175f;
-        const float hauteurCase = 197f;
+        const float largeurCase = 182f;
+        const float hauteurCase = 182f;
         const float ecart = 12f;
         contenu.sizeDelta = new Vector2(Mathf.Max(1, indices.Count) * (largeurCase + ecart) + 22f, 0f);
         HorizontalLayoutGroup layout = contenu.gameObject.AddComponent<HorizontalLayoutGroup>();
@@ -538,7 +538,7 @@ public class CollectionRefonteUI : MonoBehaviour
         {
             RectTransform casePortrait = Zone("Hero_" + index, contenu, 0f, 0f, 0f, 0f);
             casePortrait.sizeDelta = new Vector2(largeurCase, hauteurCase);
-            DessinerPortrait(casePortrait, index, index == indexSelectionne, true);
+            DessinerPortrait(casePortrait, index, index == indexSelectionne, false);
         }
         scroll.content = contenu;
         scroll.viewport = viewport;
@@ -551,7 +551,7 @@ public class CollectionRefonteUI : MonoBehaviour
             BasculerEncyclopedie, .813f, .110f, .982f, .897f, true, 22);
     }
 
-    // V8.7 : page Mes héros complète. La fiche encyclopédie n'est pas modifiée.
+    // V8.9 : Mes heros avec STATS/XP/promotion dans un seul onglet. Encyclopedie inchangee.
     private void ConstruirePersonnelle()
     {
         List<int> possedes = ListePossedee();
@@ -597,8 +597,8 @@ public class CollectionRefonteUI : MonoBehaviour
             .798f, .15f, .960f, .45f, TextAlignmentOptions.MidlineRight);
 
         // Illustration mise en avant : on réutilise l'art du héros, sans le modifier.
-        RectTransform sceneHeros = Panneau("PresentationDuHero", racine, .025f, .457f, .658f, .839f);
-        RectTransform art = Zone("IllustrationCentrale", sceneHeros, .045f, .083f, .955f, .956f);
+        RectTransform sceneHeros = Panneau("PresentationDuHero", racine, .025f, .270f, .658f, .839f);
+        RectTransform art = Zone("IllustrationCentrale", sceneHeros, .055f, .255f, .945f, .962f);
         Image dessin = ImageUI(art, Color.white);
         dessin.sprite = SpriteUI("HeroArt/" + indexSelectionne);
         if (dessin.sprite == null) dessin.sprite = Portrait(indexSelectionne);
@@ -606,11 +606,25 @@ public class CollectionRefonteUI : MonoBehaviour
         dessin.raycastTarget = false;
         Bouton("VoirLesInformations", sceneHeros, "INFOS",
             OuvrirInfoPersonnage, .055f, .872f, .350f, .974f, true, 26);
-        Texte("LegendeScene", sceneHeros, "APERÇU DU HÉROS", 21, TexteSecondaire,
-            .17f, .025f, .83f, .097f);
+        // V8.9 : identite visible juste sous le personnage, sans jauge d'XP.
+        // La progression detaillee est uniquement dans l'onglet STATS.
+        Texte("NomSousIllustration", sceneHeros,
+            "Lv. " + progression.Niveau + "  ·  " + perso.Nom, 34, Or,
+            .09f, .155f, .91f, .235f);
+        for (int i = 0; i < 5; i++)
+        {
+            float x = .285f + i * .091f;
+            RectTransform etoile = Zone("EtoileSousHero_" + (i + 1), sceneHeros,
+                x, .067f, x + .071f, .147f);
+            Image image = ImageUI(etoile, i < progression.Etoiles
+                ? new Color(1f, .91f, .63f, 1f)
+                : new Color(.32f, .40f, .55f, .78f));
+            image.sprite = EtoileMesHerosSprite();
+            image.preserveAspect = true;
+        }
 
         // Colonne de gestion : quatre onglets actifs et les six reliques à venir.
-        RectTransform gestion = Panneau("GestionDuHero", racine, .670f, .457f, .975f, .839f);
+        RectTransform gestion = Panneau("GestionDuHero", racine, .670f, .270f, .975f, .839f);
         Texte("TitreGestion", gestion, "GESTION", 27, Or,
             .04f, .925f, .96f, .990f);
         Bouton("OngletReliques", gestion, "RELIQUES",
@@ -619,7 +633,7 @@ public class CollectionRefonteUI : MonoBehaviour
         Bouton("OngletSkills", gestion, "SKILLS",
             () => ChangerOnglet(Onglet.Competences),
             .505f, .835f, .965f, .921f, onglet == Onglet.Competences, 20);
-        Bouton("OngletFiche", gestion, "FICHE",
+        Bouton("OngletStats", gestion, "STATS",
             () => ChangerOnglet(Onglet.Infos),
             .035f, .742f, .496f, .825f, onglet == Onglet.Infos, 20);
         Bouton("OngletRunes", gestion, "RUNES",
@@ -629,55 +643,16 @@ public class CollectionRefonteUI : MonoBehaviour
         if (onglet == Onglet.Competences)
             AfficherCompetencesMesHeros(contenuGestion, perso);
         else if (onglet == Onglet.Infos)
-            AfficherInfosMesHeros(contenuGestion, perso);
+            AfficherStatsMesHeros(contenuGestion, perso, progression);
         else if (onglet == Onglet.Runes)
             AfficherRunesMesHeros(contenuGestion);
         else
             AfficherReliquesMesHeros(contenuGestion);
 
-        // Carte XP : aucun gain ni achat ne se produit sur cet écran.
-        AfficherProgressionMesHeros(racine, progression);
+        // V8.9 : plus aucun panneau de progression ou de stats en dehors de STATS.
+        // Les descriptions de competence restent en bas de page.
 
-        // Deux cartes de consultation rapide : valeurs de base + skill choisie.
-        RectTransform stats = Panneau("StatistiquesMesHeros", racine, .025f, .167f, .506f, .313f);
-        Texte("TitreStatistiques", stats, "STATS DE BASE", 24, Or,
-            .055f, .800f, .945f, .975f, TextAlignmentOptions.MidlineLeft);
-        string[] labels = { "PV", "ATQ", "DEF", "SPD", "CRIT" };
-        string[] valeurs = {
-            Stat(perso, 0).ToString("N0"), Stat(perso, 1).ToString("N0"),
-            Stat(perso, 2).ToString("N0"), perso.Spd.ToString(), perso.Crit + " %"
-        };
-        for (int i = 0; i < labels.Length; i++)
-        {
-            // Hauteur suffisante pour le texte TextMeshPro : evite les champs vides
-            // lorsqu'une ligne est plus petite que la taille du caractere.
-            float yHaut = .795f - i * .141f;
-            var nomStat = Texte("StatNom" + i, stats, labels[i], 25, Or,
-                .067f, yHaut - .130f, .370f, yHaut,
-                TextAlignmentOptions.MidlineLeft);
-            var valeurStat = Texte("StatValeur" + i, stats, valeurs[i], 25, TexteClair,
-                .41f, yHaut - .130f, .923f, yHaut,
-                TextAlignmentOptions.MidlineRight);
-            // Les libelles sont sur une ligne et ne dependront plus du glyphe Ellipsis.
-            nomStat.enableWordWrapping = false;
-            valeurStat.enableWordWrapping = false;
-            nomStat.enableAutoSizing = true;
-            valeurStat.enableAutoSizing = true;
-            nomStat.fontSizeMin = 16f;
-            valeurStat.fontSizeMin = 16f;
-            nomStat.fontSizeMax = 25f;
-            valeurStat.fontSizeMax = 25f;
-            nomStat.overflowMode = TextOverflowModes.Overflow;
-            valeurStat.overflowMode = TextOverflowModes.Overflow;
-            if (i < 4)
-            {
-                var separateur = Zone("SeparateurStat" + i, stats,
-                    .07f, yHaut - .135f, .93f, yHaut - .131f);
-                ImageUI(separateur, new Color(.75f, .57f, .30f, .35f));
-            }
-        }
-
-        RectTransform details = Panneau("DetailsCompetenceMesHeros", racine, .519f, .167f, .975f, .313f);
+        RectTransform details = Panneau("DetailsCompetenceMesHeros", racine, .025f, .168f, .975f, .260f);
         int total = perso.Competences == null ? 0 : perso.Competences.Length;
         if (total > 0)
         {
@@ -740,71 +715,6 @@ public class CollectionRefonteUI : MonoBehaviour
         Bouton("FermerPromotion", fenetre, "FERMER",
             () => { afficherApercuPromotionMesHeros = false; Construire(); },
             .315f, .065f, .685f, .222f, true, 22);
-    }
-
-    // Nouvel affichage de progression ; données lues dans ProgressionHeros (déjà validé).
-    private void AfficherProgressionMesHeros(RectTransform parent, EtatProgressionHero etat)
-    {
-        RectTransform carte = Panneau("ProgressionMesHerosV87", parent, .025f, .319f, .975f, .449f);
-        if (etat == null)
-        {
-            Texte("ProgressionIndisponible", carte, "Progression indisponible", 28,
-                TexteClair, .07f, .20f, .93f, .80f);
-            return;
-        }
-        int plafond = ProgressionHeros.PlafondNiveau(etat.Etoiles);
-        bool bloque = etat.Niveau >= plafond;
-        int xpMax = bloque ? 0 : ProgressionHeros.XpPourNiveauSuivant(etat.Niveau);
-        float ratio = (!bloque && xpMax > 0)
-            ? Mathf.Clamp01((float)etat.Experience / xpMax) : 0f;
-
-        Texte("TitreProgression", carte, "PROGRESSION DU HÉROS", 23, Or,
-            .045f, .795f, .670f, .965f, TextAlignmentOptions.MidlineLeft);
-        // Etape suivante : apercu de promotion uniquement, aucune depense de monnaie.
-        Bouton("VoirPromotion", carte, etat.Etoiles >= 5 ? "MAX" : "PROMOTION",
-            () => { afficherApercuPromotionMesHeros = true; Construire(); },
-            .713f, .788f, .958f, .972f, false, 17, etat.Etoiles < 5);
-        Texte("NiveauEnGrand", carte, "Lv. " + etat.Niveau, 43, Or,
-            .052f, .425f, .315f, .785f, TextAlignmentOptions.MidlineLeft);
-        Texte("PlafondDeNiveau", carte, "MAX " + plafond, 22, TexteSecondaire,
-            .052f, .252f, .315f, .485f, TextAlignmentOptions.MidlineLeft);
-        Texte("RangEtoile", carte, "RANG", 19, TexteSecondaire,
-            .415f, .673f, .945f, .825f, TextAlignmentOptions.MidlineLeft);
-
-        // 5 étoiles sous forme d'images : pas de glyphes Unicode manquants dans TMP.
-        for (int i = 0; i < 5; i++)
-        {
-            float x = .425f + i * .106f;
-            RectTransform etoile = Zone("Etoile_" + (i + 1), carte,
-                x, .430f, x + .083f, .720f);
-            Image image = ImageUI(etoile, i < etat.Etoiles
-                ? new Color(1f, .91f, .63f, 1f)
-                : new Color(.33f, .42f, .58f, .82f));
-            image.sprite = EtoileMesHerosSprite();
-            image.preserveAspect = true;
-        }
-        string texteXP = bloque
-            ? (etat.Etoiles == 5 ? "NIVEAU MAXIMUM ATTEINT" : "PALIER ATTEINT - PROMOTION À VENIR")
-            : "XP  " + etat.Experience.ToString("N0") + " / " + xpMax.ToString("N0");
-        var legende = Texte("XpCourante", carte, texteXP, 20,
-            bloque ? Or : TexteClair, .340f, .258f, .955f, .448f,
-            TextAlignmentOptions.MidlineRight);
-        legende.enableAutoSizing = true;
-        legende.fontSizeMin = 15;
-        legende.fontSizeMax = 20;
-        legende.overflowMode = TextOverflowModes.Truncate;
-
-        RectTransform rail = Zone("RailXP", carte, .055f, .105f, .945f, .200f);
-        ImageUI(rail, new Color(.050f, .115f, .208f, 1f), "bouton_sombre");
-        RectTransform railInterieur = Zone("RailInterieur", rail, .012f, .24f, .988f, .76f);
-        ImageUI(railInterieur, new Color(.16f, .28f, .43f, .88f));
-        if (ratio > .001f)
-        {
-            var remplissage = Zone("XPRemplie", railInterieur, 0f, 0f, ratio, 1f);
-            ImageUI(remplissage, new Color(.27f, .69f, .96f, 1f));
-            var reflet = Zone("RefletXP", remplissage, 0f, .62f, 1f, 1f);
-            ImageUI(reflet, new Color(.75f, .94f, 1f, .65f));
-        }
     }
 
     // Texture d'une étoile à cinq branches dessinée en code, une fois pour toutes.
@@ -899,19 +809,91 @@ public class CollectionRefonteUI : MonoBehaviour
         }
     }
 
-    private void AfficherInfosMesHeros(RectTransform parent, Perso p)
+    // V8.9 : onglet STATS. Toutes les informations et actions de progression
+    // sont rassemblees ici. Aucune modification des sauvegardes ni depense d'or.
+    private void AfficherStatsMesHeros(RectTransform parent, Perso p, EtatProgressionHero etat)
     {
-        Texte("TitreFicheRapide", parent, "FICHE RAPIDE", 23, Or,
-            .035f, .889f, .965f, .985f);
-        Texte("TypeEtClasse", parent,
-            "RÔLE\n" + p.Role + "\n\nRARETÉ\n" + p.Rarete,
-            24, TexteClair, .08f, .400f, .92f, .855f);
-        Texte("MeneurRapide", parent,
-            p.Meneur == null ? "MENEUR : AUCUN" : "MENEUR DISPONIBLE",
-            20, p.Meneur == null ? TexteSecondaire : Or,
-            .06f, .230f, .94f, .390f);
-        Bouton("InfosDetaillees", parent, "COMMUNAUTÉ / INFOS",
-            OuvrirInfoPersonnage, .025f, .025f, .975f, .205f, false, 18);
+        if (etat == null)
+        {
+            Texte("StatsIndisponibles", parent, "Progression indisponible", 24,
+                TexteClair, .04f, .35f, .96f, .65f);
+            return;
+        }
+
+        int plafond = ProgressionHeros.PlafondNiveau(etat.Etoiles);
+        bool bloque = etat.Niveau >= plafond;
+        int xpMax = bloque ? 0 : ProgressionHeros.XpPourNiveauSuivant(etat.Niveau);
+        float ratio = !bloque && xpMax > 0
+            ? Mathf.Clamp01((float)etat.Experience / xpMax) : 0f;
+
+        Texte("TitreStatsOnglet", parent, "STATISTIQUES", 25, Or,
+            .035f, .934f, .965f, .998f);
+        Texte("NiveauStats", parent, "Lv. " + etat.Niveau + " / " + plafond,
+            24, TexteClair, .045f, .852f, .955f, .939f,
+            TextAlignmentOptions.MidlineLeft);
+
+        string[] labels = { "PV", "ATQ", "DEF", "SPD", "CRIT" };
+        string[] valeurs = {
+            Stat(p, 0).ToString("N0"), Stat(p, 1).ToString("N0"),
+            Stat(p, 2).ToString("N0"), p.Spd.ToString(), p.Crit + " %"
+        };
+        for (int i = 0; i < labels.Length; i++)
+        {
+            float yHaut = .835f - i * .089f;
+            TMP_Text nom = Texte("LibelleStat" + i, parent, labels[i], 25, Or,
+                .055f, yHaut - .079f, .44f, yHaut,
+                TextAlignmentOptions.MidlineLeft);
+            TMP_Text valeur = Texte("ValeurStat" + i, parent, valeurs[i], 25, TexteClair,
+                .46f, yHaut - .079f, .945f, yHaut,
+                TextAlignmentOptions.MidlineRight);
+            nom.enableAutoSizing = true;
+            valeur.enableAutoSizing = true;
+            nom.fontSizeMin = 18f;
+            valeur.fontSizeMin = 18f;
+            nom.fontSizeMax = 25f;
+            valeur.fontSizeMax = 25f;
+            nom.overflowMode = TextOverflowModes.Truncate;
+            valeur.overflowMode = TextOverflowModes.Truncate;
+
+            // Fins separateurs, sans masquer les valeurs.
+            if (i < labels.Length - 1)
+            {
+                RectTransform trait = Zone("SeparateurStats" + i, parent,
+                    .055f, yHaut - .083f, .945f, yHaut - .080f);
+                ImageUI(trait, new Color(.79f, .62f, .35f, .52f));
+            }
+        }
+
+        string texteXP = bloque
+            ? (etat.Etoiles == 5 ? "NIVEAU MAXIMUM" : "PALIER ATTEINT")
+            : "XP " + etat.Experience.ToString("N0") + " / " + xpMax.ToString("N0");
+        TMP_Text xp = Texte("XpDansStats", parent, texteXP, 19,
+            bloque ? Or : TexteClair,
+            .035f, .285f, .965f, .370f);
+        xp.enableAutoSizing = true;
+        xp.fontSizeMin = 15f;
+        xp.fontSizeMax = 19f;
+        xp.overflowMode = TextOverflowModes.Truncate;
+
+        // Barre XP interne a STATS uniquement.
+        RectTransform rail = Zone("RailXPStats", parent, .045f, .147f, .644f, .234f);
+        ImageUI(rail, new Color(.045f, .105f, .190f, 1f), "bouton_sombre");
+        RectTransform interieur = Zone("InterieurXPStats", rail, .025f, .245f, .975f, .755f);
+        ImageUI(interieur, new Color(.14f, .28f, .45f, .90f));
+        if (ratio > .001f)
+        {
+            RectTransform progression = Zone("XPRemplie", interieur, 0f, 0f, ratio, 1f);
+            ImageUI(progression, new Color(.23f, .69f, .98f, 1f));
+            RectTransform reflet = Zone("RefletXP", progression, 0f, .63f, 1f, 1f);
+            ImageUI(reflet, new Color(.74f, .93f, 1f, .58f));
+        }
+
+        // La promotion ouvre toujours seulement l'apercu des conditions.
+        // Aucune depense de monnaie et aucune promotion automatique.
+        Bouton("PromotionDepuisStats", parent,
+            etat.Etoiles >= 5 ? "RANG MAX" : "PROMOTION",
+            () => { afficherApercuPromotionMesHeros = true; Construire(); },
+            .665f, .137f, .965f, .244f, false, 17, etat.Etoiles < 5);
     }
 
     private void AfficherRunesMesHeros(RectTransform parent)
