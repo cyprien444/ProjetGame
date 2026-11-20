@@ -387,7 +387,7 @@ public class CollectionRefonteUI : MonoBehaviour
         trait.raycastTarget = false;
     }
 
-    private void BoutonFicheImage(string nom, Transform parent, string ressource,
+    private RectTransform BoutonFicheImage(string nom, Transform parent, string ressource,
         Action action, float x1, float y1, float x2, float y2, bool disponible = true)
     {
         var zone = IllustrationFiche(nom, parent, ressource, x1, y1, x2, y2);
@@ -397,6 +397,36 @@ public class CollectionRefonteUI : MonoBehaviour
         bouton.targetGraphic = image;
         bouton.interactable = disponible;
         if (action != null) bouton.onClick.AddListener(() => action());
+        return zone;
+    }
+
+    // V3.6.2 : icones independantes des cadres UGUI, centrees avec marge.
+    // Les sprites ne sont pas incrustes dans les bordures : aucun debordement.
+    // RawImage accepte les PNG du dossier Resources sans configuration Sprite.
+    private void AjouterIconeDansCadre(RectTransform cadre, string fichier,
+        bool disponible = true)
+    {
+        const string prefixe = "CollectionUI/Encyclopedie/Capacites/";
+        Texture2D image = Resources.Load<Texture2D>(prefixe + fichier);
+        if (image == null)
+        {
+            // Egalement compatible avec une texture importee en Sprite (2D et UI).
+            Sprite sprite = Resources.Load<Sprite>(prefixe + fichier);
+            if (sprite != null) image = sprite.texture;
+        }
+        if (image == null)
+        {
+            Debug.LogWarning("Icone de competence introuvable : " + prefixe + fichier);
+            return;
+        }
+
+        // 12 % de marge de chaque cote, meme pour le cadre Eveil plus grand.
+        // Les 5 positions d'origine et tous leurs clics sont preserves.
+        var contenu = Zone("IconeInterieure", cadre, .12f, .12f, .88f, .88f);
+        var dessin = contenu.gameObject.AddComponent<RawImage>();
+        dessin.texture = image;
+        dessin.color = disponible ? Color.white : new Color(.82f, .85f, .90f, .90f);
+        dessin.raycastTarget = false;
     }
 
     private void RetourFichePersonnelle()
@@ -1193,31 +1223,38 @@ public class CollectionRefonteUI : MonoBehaviour
             Texte("IllustrationManquante", emplacement3D, p.Nom, 38, TexteClair,
                 .1f, .3f, .9f, .7f);
 
-        // 4 - 5 emplacements a droite : eveil, 3 competences, meneur.
-        // Toutes les images de competence sont PROVISOIRES (pas d'icones par
-        // competence dans les donnees actuelles). Les effets affiches sont reels.
-        BoutonFicheImage("EveilVerrouille", racine, "icone_eveil", null,
+        // 4 - Les 5 cadres existants, remplis par des icones INDEPENDANTES.
+        // Le modele 3D central, les bordures, les coordonnees et les clics
+        // d'origine ne sont pas modifies. Icones provisoires, pas definitives.
+        RectTransform cadreEveil = BoutonFicheImage(
+            "EveilVerrouille", racine, "icone_eveil", null,
             .771f, .691f, .966f, .796f, false);
+        AjouterIconeDansCadre(cadreEveil, "Eveil", false);
 
-        string[] visuels = { "icone_skill_1", "icone_skill_2", "icone_skill_3" };
+        string[] visuels = { "Competence1", "Competence2", "Competence3" };
         float[] bas = { .574f, .471f, .367f };
-        // Trois cases strictement de meme largeur ET de meme hauteur.
         const float hauteurCompetence = .096f;
         for (int j = 0; j < 3; j++)
         {
             int numero = j;
             bool existe = p.Competences != null && j < p.Competences.Length;
-            BoutonFicheImage("Competence_" + (j + 1), racine,
-                existe ? visuels[j] : "icone_vide",
+            RectTransform cadre = BoutonFicheImage("Competence_" + (j + 1), racine,
+                existe ? "icone_skill_" + (j + 1) : "icone_vide",
                 existe ? (Action)(() => SelectionnerCompetenceEncyclopedie(numero)) : null,
                 .786f, bas[j], .954f, bas[j] + hauteurCompetence, existe);
+            // Les soins sont correctement identifies par les donnees JSON.
+            string icone = !existe ? "Verrouille" :
+                (p.Competences[j].EstSoin ? "Soin" : visuels[j]);
+            AjouterIconeDansCadre(cadre, icone, existe);
         }
 
         bool meneurExiste = p.Meneur != null;
-        BoutonFicheImage("Lead", racine,
+        RectTransform cadreLead = BoutonFicheImage("Lead", racine,
             meneurExiste ? "icone_lead" : "icone_vide",
             meneurExiste ? (Action)SelectionnerMeneurEncyclopedie : null,
             .786f, .263f, .954f, .359f, meneurExiste);
+        AjouterIconeDansCadre(cadreLead, meneurExiste ? "Lead" : "LeadAbsent",
+            meneurExiste);
 
         // 5 - Veritable panneau dore de la maquette : les chiffres originaux
         // ont ete effaces de l'asset, puis remplis avec les stats JSON du heros.
