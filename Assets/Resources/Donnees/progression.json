@@ -1,0 +1,7 @@
+{
+  "plafondsNiveau": [20, 40, 60, 80, 100],
+  "xpBase": 100,
+  "xpLineaire": 20,
+  "xpQuadratique": 2,
+  "multiplicateurStatNiveau100": 3.0
+}
