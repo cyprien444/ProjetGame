@@ -36,6 +36,7 @@ public class CollectionRefonteUI : MonoBehaviour
     private TMP_Text texteInfo;
     private float positionVerticale = 1f;
     private float positionHorizontaleMesHeros = 0f;
+    private bool afficherApercuPromotionMesHeros = false;
     private bool pret;
 
     private void Awake()
@@ -192,6 +193,7 @@ public class CollectionRefonteUI : MonoBehaviour
         if (index < 0 || index >= Donnees.Persos.Length) return;
         RetenirDefilement();
         indexSelectionne = index;
+        afficherApercuPromotionMesHeros = false;
         indexCompetence = 0;
         afficherDescriptionCompetence = false;
         afficherDescriptionMeneur = false;
@@ -500,187 +502,429 @@ public class CollectionRefonteUI : MonoBehaviour
                 0f, .015f, 1f, .23f);
     }
 
-    // Barre permanente de portraits possedes, en bas. Bouton Encyclopedie a droite.
+    // V8.8 : bande compacte de portraits, sans compteur de collection.
+    // L'Encyclopedie reste independante du defilement des heros possedes.
     private void BandeMesHerosEnBas(Transform parent)
     {
-        var indices = ListePossedee();
-        var panneau = Panneau("BandeMesHeros", parent, .025f, .050f, .975f, .253f);
-        Texte("TitreBande", panneau, "MES HÉROS · " + indices.Count + "/" + Donnees.Persos.Length,
-            23, Or, .025f, .865f, .785f, .995f, TextAlignmentOptions.MidlineLeft);
-        var scroll = Zone("ScrollPossedes", panneau, .012f, .075f, .808f, .868f);
-        var sr = scroll.gameObject.AddComponent<ScrollRect>();
-        sr.horizontal = true;
-        sr.vertical = false;
-        sr.scrollSensitivity = 55f;
-        sr.movementType = ScrollRect.MovementType.Clamped;
-        var vp = Zone("Viewport", scroll, 0f, 0f, 1f, 1f);
-        ImageUI(vp, new Color(.01f, .02f, .04f, .05f), null, true);
-        vp.gameObject.AddComponent<RectMask2D>();
-        var content = Zone("Content", vp, 0f, 0f, 0f, 1f);
-        content.pivot = new Vector2(0f, .5f);
-        content.sizeDelta = new Vector2(Mathf.Max(1, indices.Count) * 174f + 24f, 0f);
-        var layout = content.gameObject.AddComponent<HorizontalLayoutGroup>();
+        List<int> indices = ListePossedee();
+        RectTransform bande = Panneau("BandeCollectionV88", parent, .025f, .025f, .975f, .159f);
+
+        // Toute la hauteur de la bande sert aux portraits, sans titre redondant.
+        RectTransform zoneScroll = Zone("DefilementDesHeros", bande, .017f, .070f, .796f, .942f);
+        ScrollRect scroll = zoneScroll.gameObject.AddComponent<ScrollRect>();
+        scroll.horizontal = true;
+        scroll.vertical = false;
+        scroll.scrollSensitivity = 46f;
+        scroll.movementType = ScrollRect.MovementType.Clamped;
+
+        RectTransform viewport = Zone("FenetreDesPortraits", zoneScroll, 0f, 0f, 1f, 1f);
+        ImageUI(viewport, new Color(.02f, .05f, .11f, .11f), null, true);
+        viewport.gameObject.AddComponent<RectMask2D>();
+        RectTransform contenu = Zone("PortraitsPossedes", viewport, 0f, 0f, 0f, 1f);
+        contenu.pivot = new Vector2(0f, .5f);
+        const float largeurCase = 175f;
+        const float hauteurCase = 197f;
+        const float ecart = 12f;
+        contenu.sizeDelta = new Vector2(Mathf.Max(1, indices.Count) * (largeurCase + ecart) + 22f, 0f);
+        HorizontalLayoutGroup layout = contenu.gameObject.AddComponent<HorizontalLayoutGroup>();
         layout.childAlignment = TextAnchor.MiddleLeft;
         layout.childControlWidth = false;
         layout.childControlHeight = false;
         layout.childForceExpandWidth = false;
         layout.childForceExpandHeight = false;
-        layout.spacing = 12f;
+        layout.spacing = ecart;
         layout.padding = new RectOffset(10, 10, 0, 0);
         foreach (int index in indices)
         {
-            var cadre = Zone("PortraitPossede_" + index, content, 0f, 0f, 0f, 0f);
-            cadre.sizeDelta = new Vector2(162f, 168f);
-            DessinerPortrait(cadre, index, index == indexSelectionne);
+            RectTransform casePortrait = Zone("Hero_" + index, contenu, 0f, 0f, 0f, 0f);
+            casePortrait.sizeDelta = new Vector2(largeurCase, hauteurCase);
+            DessinerPortrait(casePortrait, index, index == indexSelectionne, true);
         }
-        sr.content = content;
-        sr.viewport = vp;
-        listePortraits = sr;
+        scroll.content = contenu;
+        scroll.viewport = viewport;
+        listePortraits = scroll;
         Canvas.ForceUpdateCanvases();
-        sr.horizontalNormalizedPosition = positionHorizontaleMesHeros;
-        Bouton("BoutonEncyclopedieBas", panneau, "ENCYCLO-\nPÉDIE",
-            BasculerEncyclopedie, .825f, .11f, .988f, .84f, true, 24);
+        scroll.horizontalNormalizedPosition = positionHorizontaleMesHeros;
+
+        // Bouton fixe, jamais inclus dans la zone defilante.
+        Bouton("AccesEncyclopedie", bande, "ENCYCLO-\nPÉDIE",
+            BasculerEncyclopedie, .813f, .110f, .982f, .897f, true, 22);
     }
 
-    // Ecran personnel inspire de la reference: art au centre, competences a droite,
-    // statistiques en bas a gauche, liste de heros en bas.
+    // V8.7 : page Mes héros complète. La fiche encyclopédie n'est pas modifiée.
     private void ConstruirePersonnelle()
     {
-        var possedes = ListePossedee();
+        List<int> possedes = ListePossedee();
         if (!possedes.Contains(indexSelectionne))
             indexSelectionne = possedes.Count > 0 ? possedes[0] : -1;
 
-        string titre = indexSelectionne < 0 ? "COLLECTION" : Donnees.Persos[indexSelectionne].Nom.ToUpperInvariant();
-        string sousTitre = indexSelectionne < 0 ? "Aucun héros possédé" :
-            Donnees.Persos[indexSelectionne].Role + " · " + Donnees.Persos[indexSelectionne].Rarete;
-        Entete(titre, sousTitre);
-        BandeMesHerosEnBas(racine);
+        RectTransform haut = Panneau("EnteteMesHerosV87", racine, .025f, .924f, .975f, .994f);
+        Bouton("RetourAuMenu", haut, "RETOUR",
+            () => SceneManager.LoadScene("Menu"), .015f, .145f, .246f, .870f, false, 25);
+        Texte("TitreMesHeros", haut, "MES HÉROS", 46, Or,
+            .263f, .438f, .765f, .950f);
+        Texte("SousTitreMesHeros", haut, "COLLECTION PERSONNELLE", 22, TexteSecondaire,
+            .280f, .095f, .745f, .450f);
+        Bouton("AccesEquipe", haut, "ÉQUIPE",
+            () => SceneManager.LoadScene("Equipe"), .790f, .145f, .985f, .870f, false, 25);
 
+        BandeMesHerosEnBas(racine);
         if (indexSelectionne < 0)
         {
-            var vide = Panneau("SansHeros", racine, .035f, .32f, .969f, .87f);
-            Texte("AucunHero", vide, "Aucun personnage possédé pour le moment.\n\nOuvre l'Encyclopédie pour voir tous les héros.",
-                36, TexteClair, .05f, .18f, .95f, .82f);
+            var sansHero = Panneau("AucunHeroPossede", racine, .04f, .280f, .96f, .890f);
+            Texte("MessageAucunHero", sansHero,
+                "Aucun héros possédé.\n\nDécouvre les personnages dans l'Encyclopédie.",
+                37, TexteClair, .09f, .27f, .91f, .74f);
             return;
         }
 
-        Perso p = Donnees.Persos[indexSelectionne];
-        var scene = Panneau("ScenePersonnage", racine, .025f, .267f, .746f, .910f);
-        var zoneArt = Zone("HeroCentral", scene, .035f, .195f, .972f, .965f);
-        var art = ImageUI(zoneArt, Color.white);
-        art.sprite = SpriteUI("HeroArt/" + indexSelectionne);
-        if (art.sprite == null) art.sprite = Portrait(indexSelectionne);
-        art.preserveAspect = true;
+        Perso perso = Donnees.Persos[indexSelectionne];
+        EtatProgressionHero progression = ProgressionHeros.Lire(indexSelectionne);
 
-        Bouton("Informations", scene, "ⓘ INFOS", OuvrirInfoPersonnage,
-            .027f, .875f, .365f, .978f, true, 26);
+        // Bandeau identitaire : personnage, classe et rareté.
+        RectTransform identite = Panneau("IdentiteDuHero", racine, .025f, .846f, .975f, .918f);
+        RectTransform vignette = Zone("PortraitIdentite", identite, .016f, .10f, .152f, .91f);
+        ImageUI(vignette, Color.white, "cadre_portrait");
+        RectTransform photo = Zone("ImageIdentite", vignette, .09f, .09f, .91f, .91f);
+        Image imgPhoto = ImageUI(photo, Color.white);
+        imgPhoto.sprite = Portrait(indexSelectionne);
+        imgPhoto.preserveAspect = true;
+        Texte("NomSelectionne", identite, perso.Nom, 42, Or,
+            .172f, .46f, .865f, .94f, TextAlignmentOptions.MidlineLeft);
+        Texte("RoleEtRarete", identite, perso.Role + "  ·  " + perso.Rarete, 25, TexteClair,
+            .172f, .12f, .865f, .50f, TextAlignmentOptions.MidlineLeft);
+        Texte("CollectionTag", identite, "POSSÉDÉ", 18, Or,
+            .798f, .15f, .960f, .45f, TextAlignmentOptions.MidlineRight);
 
-        // ETAPE 8.6 : statut de progression du personnage possede (lecture seule).
-        // Ne modifie pas les statistiques, les combats ou la sauvegarde.
-        AjouterProgressionPersonnelle(scene, indexSelectionne);
+        // Illustration mise en avant : on réutilise l'art du héros, sans le modifier.
+        RectTransform sceneHeros = Panneau("PresentationDuHero", racine, .025f, .457f, .658f, .839f);
+        RectTransform art = Zone("IllustrationCentrale", sceneHeros, .045f, .083f, .955f, .956f);
+        Image dessin = ImageUI(art, Color.white);
+        dessin.sprite = SpriteUI("HeroArt/" + indexSelectionne);
+        if (dessin.sprite == null) dessin.sprite = Portrait(indexSelectionne);
+        dessin.preserveAspect = true;
+        dessin.raycastTarget = false;
+        Bouton("VoirLesInformations", sceneHeros, "INFOS",
+            OuvrirInfoPersonnage, .055f, .872f, .350f, .974f, true, 26);
+        Texte("LegendeScene", sceneHeros, "APERÇU DU HÉROS", 21, TexteSecondaire,
+            .17f, .025f, .83f, .097f);
 
-        var stats = Panneau("StatsBase", scene, .030f, .047f, .57f, .405f);
-        Texte("TitreStats", stats, "STATISTIQUES DE BASE", 25, Or,
-            .035f, .83f, .96f, .98f, TextAlignmentOptions.MidlineLeft);
-        string[] lignes = {
-            "PV       " + Stat(p, 0).ToString("N0"),
-            "ATQ      " + Stat(p, 1).ToString("N0"),
-            "DEF      " + Stat(p, 2).ToString("N0"),
-            "SPD      " + p.Spd,
-            "CRIT     " + p.Crit + " %"
+        // Colonne de gestion : quatre onglets actifs et les six reliques à venir.
+        RectTransform gestion = Panneau("GestionDuHero", racine, .670f, .457f, .975f, .839f);
+        Texte("TitreGestion", gestion, "GESTION", 27, Or,
+            .04f, .925f, .96f, .990f);
+        Bouton("OngletReliques", gestion, "RELIQUES",
+            () => ChangerOnglet(Onglet.Equipements),
+            .035f, .835f, .496f, .921f, onglet == Onglet.Equipements, 20);
+        Bouton("OngletSkills", gestion, "SKILLS",
+            () => ChangerOnglet(Onglet.Competences),
+            .505f, .835f, .965f, .921f, onglet == Onglet.Competences, 20);
+        Bouton("OngletFiche", gestion, "FICHE",
+            () => ChangerOnglet(Onglet.Infos),
+            .035f, .742f, .496f, .825f, onglet == Onglet.Infos, 20);
+        Bouton("OngletRunes", gestion, "RUNES",
+            () => ChangerOnglet(Onglet.Runes),
+            .505f, .742f, .965f, .825f, onglet == Onglet.Runes, 20);
+        RectTransform contenuGestion = Zone("ContenuGestion", gestion, .052f, .042f, .948f, .725f);
+        if (onglet == Onglet.Competences)
+            AfficherCompetencesMesHeros(contenuGestion, perso);
+        else if (onglet == Onglet.Infos)
+            AfficherInfosMesHeros(contenuGestion, perso);
+        else if (onglet == Onglet.Runes)
+            AfficherRunesMesHeros(contenuGestion);
+        else
+            AfficherReliquesMesHeros(contenuGestion);
+
+        // Carte XP : aucun gain ni achat ne se produit sur cet écran.
+        AfficherProgressionMesHeros(racine, progression);
+
+        // Deux cartes de consultation rapide : valeurs de base + skill choisie.
+        RectTransform stats = Panneau("StatistiquesMesHeros", racine, .025f, .167f, .506f, .313f);
+        Texte("TitreStatistiques", stats, "STATS DE BASE", 24, Or,
+            .055f, .800f, .945f, .975f, TextAlignmentOptions.MidlineLeft);
+        string[] labels = { "PV", "ATQ", "DEF", "SPD", "CRIT" };
+        string[] valeurs = {
+            Stat(perso, 0).ToString("N0"), Stat(perso, 1).ToString("N0"),
+            Stat(perso, 2).ToString("N0"), perso.Spd.ToString(), perso.Crit + " %"
         };
-        for (int k = 0; k < lignes.Length; k++)
+        for (int i = 0; i < labels.Length; i++)
         {
-            float yy = .765f - k * .142f;
-            Texte("Stat" + k, stats, lignes[k], 26, TexteClair,
-                .06f, yy - .10f, .95f, yy + .02f, TextAlignmentOptions.MidlineLeft);
-        }
-        int n = p.Competences == null ? 0 : p.Competences.Length;
-        if (n > 0)
-        {
-            indexCompetence = Mathf.Clamp(indexCompetence, 0, n - 1);
-            var selected = p.Competences[indexCompetence];
-            var apercu = Panneau("DescriptionCompetence", scene, .59f, .047f, .972f, .405f);
-            Texte("TitreCompetence", apercu, selected.Nom, 25, Or, .045f, .70f, .95f, .97f);
-            Texte("EffetCompetence", apercu, Description(selected), 23, TexteClair,
-                .055f, .13f, .945f, .74f);
+            // Hauteur suffisante pour le texte TextMeshPro : evite les champs vides
+            // lorsqu'une ligne est plus petite que la taille du caractere.
+            float yHaut = .795f - i * .141f;
+            var nomStat = Texte("StatNom" + i, stats, labels[i], 25, Or,
+                .067f, yHaut - .130f, .370f, yHaut,
+                TextAlignmentOptions.MidlineLeft);
+            var valeurStat = Texte("StatValeur" + i, stats, valeurs[i], 25, TexteClair,
+                .41f, yHaut - .130f, .923f, yHaut,
+                TextAlignmentOptions.MidlineRight);
+            // Les libelles sont sur une ligne et ne dependront plus du glyphe Ellipsis.
+            nomStat.enableWordWrapping = false;
+            valeurStat.enableWordWrapping = false;
+            nomStat.enableAutoSizing = true;
+            valeurStat.enableAutoSizing = true;
+            nomStat.fontSizeMin = 16f;
+            valeurStat.fontSizeMin = 16f;
+            nomStat.fontSizeMax = 25f;
+            valeurStat.fontSizeMax = 25f;
+            nomStat.overflowMode = TextOverflowModes.Overflow;
+            valeurStat.overflowMode = TextOverflowModes.Overflow;
+            if (i < 4)
+            {
+                var separateur = Zone("SeparateurStat" + i, stats,
+                    .07f, yHaut - .135f, .93f, yHaut - .131f);
+                ImageUI(separateur, new Color(.75f, .57f, .30f, .35f));
+            }
         }
 
-        var competences = Panneau("EchelleCompetences", racine, .752f, .267f, .975f, .910f);
-        Texte("CompetencesTitre", competences, "COMPÉTENCES", 25, Or,
-            .02f, .908f, .98f, .989f);
-        for (int j = 0; j < 3; j++)
+        RectTransform details = Panneau("DetailsCompetenceMesHeros", racine, .519f, .167f, .975f, .313f);
+        int total = perso.Competences == null ? 0 : perso.Competences.Length;
+        if (total > 0)
         {
-            int pos = j;
-            bool existe = p.Competences != null && j < p.Competences.Length;
-            float y = .69f - j * .215f;
-            Bouton("Competence" + j, competences, (j + 1).ToString(),
-                existe ? (Action)(() => { indexCompetence = pos; Construire(); }) : null,
-                .20f, y, .80f, y + .158f, existe && indexCompetence == j, 45, existe);
-            Texte("CompetenceNom" + j, competences,
-                existe ? p.Competences[j].Nom : "À DÉBLOQUER", 20,
-                existe ? TexteClair : TexteSecondaire,
-                .015f, y - .067f, .985f, y + .005f);
+            indexCompetence = Mathf.Clamp(indexCompetence, 0, total - 1);
+            Competence selection = perso.Competences[indexCompetence];
+            Texte("TitreSkill", details, "COMPÉTENCE " + (indexCompetence + 1), 23, Or,
+                .06f, .785f, .93f, .970f, TextAlignmentOptions.MidlineLeft);
+            Texte("NomSkill", details, selection.Nom, 24, TexteClair,
+                .06f, .524f, .95f, .805f, TextAlignmentOptions.MidlineLeft);
+            Texte("EffetSkill", details, Description(selection), 19, TexteSecondaire,
+                .06f, .045f, .94f, .540f, TextAlignmentOptions.MidlineLeft);
         }
-        Bouton("Eveil", competences, "ÉVEIL", null,
-            .115f, .025f, .885f, .139f, false, 24, false);
-        Texte("EveilNote", competences, "À VENIR", 18, TexteSecondaire,
-            .025f, .148f, .975f, .187f);
+        else
+            Texte("AucuneCompetence", details, "Aucune compétence renseignée.", 24,
+                TexteClair, .07f, .18f, .93f, .82f);
+
+        texteInfo = Texte("AideMesHeros", racine,
+            "Reliques et monnaie de promotion : fonctionnalités en préparation.",
+            18, TexteSecondaire, .028f, .002f, .973f, .025f);
+        if (afficherApercuPromotionMesHeros)
+            AfficherApercuPromotionMesHeros(perso, progression);
     }
 
-    // ETAPE 8.6 : affiche dans MES HEROS le niveau, les etoiles et la barre d'XP.
-    // La lecture des donnees est realisee par ProgressionHeros.Lire(index).
-    // La jauge est informative : aucun achat, promotion ou gain d'XP ici.
-    private void AjouterProgressionPersonnelle(RectTransform scene, int index)
+    // Etape 8.8 : consultation des conditions de promotion, SANS achat ni mutation de sauvegarde.
+    // Cette interface reste dans Mes heros et n'affecte ni les combats ni l'Encyclopedie.
+    private void AfficherApercuPromotionMesHeros(Perso perso, EtatProgressionHero etat)
     {
-        EtatProgressionHero etat = ProgressionHeros.Lire(index);
-        if (etat == null) return;
+        RectTransform voile = Zone("VoilePromotion", racine, 0f, 0f, 1f, 1f);
+        Image voileImage = ImageUI(voile, new Color(.005f, .014f, .035f, .78f), null, true);
+        voileImage.raycastTarget = true;
+        RectTransform fenetre = Panneau("FenetrePromotion", voile,
+            .090f, .345f, .910f, .654f);
+        Texte("TitrePromotion", fenetre, "PROMOTION DU HÉROS", 35, Or,
+            .08f, .835f, .92f, .955f);
+        Texte("NomPromotion", fenetre, perso.Nom + "  ·  " + etat.Etoiles + " / 5 étoiles",
+            28, TexteClair, .08f, .707f, .92f, .835f);
 
+        if (etat.Etoiles >= 5)
+        {
+            Texte("EtatPromotion", fenetre, "Rang maximum atteint.", 28,
+                Or, .075f, .48f, .925f, .685f);
+        }
+        else
+        {
+            int requis = ProgressionHeros.PlafondNiveau(etat.Etoiles);
+            bool possible = ProgressionHeros.PeutEtrePromu(indexSelectionne);
+            Texte("ConditionPromotion", fenetre,
+                "Niveau requis : " + requis + "   ·   Actuel : " + etat.Niveau,
+                26, TexteClair, .075f, .56f, .925f, .705f);
+            Texte("CoutPromotion", fenetre,
+                "Coût indicatif : " + ProgressionHeros.CoutPromotionPropose(etat.Etoiles).ToString("N0") +
+                " (monnaie à définir)",
+                23, TexteSecondaire, .075f, .405f, .925f, .557f);
+            Texte("EtatPromotion", fenetre,
+                possible ? "Niveau atteint · paiement non activé" :
+                "Atteins d'abord le niveau " + requis + ".",
+                25, possible ? Or : TexteSecondaire,
+                .075f, .245f, .925f, .412f);
+        }
+        Bouton("FermerPromotion", fenetre, "FERMER",
+            () => { afficherApercuPromotionMesHeros = false; Construire(); },
+            .315f, .065f, .685f, .222f, true, 22);
+    }
+
+    // Nouvel affichage de progression ; données lues dans ProgressionHeros (déjà validé).
+    private void AfficherProgressionMesHeros(RectTransform parent, EtatProgressionHero etat)
+    {
+        RectTransform carte = Panneau("ProgressionMesHerosV87", parent, .025f, .319f, .975f, .449f);
+        if (etat == null)
+        {
+            Texte("ProgressionIndisponible", carte, "Progression indisponible", 28,
+                TexteClair, .07f, .20f, .93f, .80f);
+            return;
+        }
         int plafond = ProgressionHeros.PlafondNiveau(etat.Etoiles);
         bool bloque = etat.Niveau >= plafond;
-        int xpSuivante = bloque ? 0 : ProgressionHeros.XpPourNiveauSuivant(etat.Niveau);
-        float remplissage = (!bloque && xpSuivante > 0)
-            ? Mathf.Clamp01((float)etat.Experience / xpSuivante) : 0f;
+        int xpMax = bloque ? 0 : ProgressionHeros.XpPourNiveauSuivant(etat.Niveau);
+        float ratio = (!bloque && xpMax > 0)
+            ? Mathf.Clamp01((float)etat.Experience / xpMax) : 0f;
 
-        // Zone en haut a droite de la fiche, sans chevaucher le bouton INFOS.
-        var panneau = Panneau("ProgressionDuHero", scene,
-            .400f, .838f, .972f, .972f);
+        Texte("TitreProgression", carte, "PROGRESSION DU HÉROS", 23, Or,
+            .045f, .795f, .670f, .965f, TextAlignmentOptions.MidlineLeft);
+        // Etape suivante : apercu de promotion uniquement, aucune depense de monnaie.
+        Bouton("VoirPromotion", carte, etat.Etoiles >= 5 ? "MAX" : "PROMOTION",
+            () => { afficherApercuPromotionMesHeros = true; Construire(); },
+            .713f, .788f, .958f, .972f, false, 17, etat.Etoiles < 5);
+        Texte("NiveauEnGrand", carte, "Lv. " + etat.Niveau, 43, Or,
+            .052f, .425f, .315f, .785f, TextAlignmentOptions.MidlineLeft);
+        Texte("PlafondDeNiveau", carte, "MAX " + plafond, 22, TexteSecondaire,
+            .052f, .252f, .315f, .485f, TextAlignmentOptions.MidlineLeft);
+        Texte("RangEtoile", carte, "RANG", 19, TexteSecondaire,
+            .415f, .673f, .945f, .825f, TextAlignmentOptions.MidlineLeft);
 
-        var niveau = Texte("NiveauActuel", panneau,
-            "NIVEAU " + etat.Niveau + " / " + plafond, 23, Or,
-            .055f, .620f, .580f, .955f, TextAlignmentOptions.MidlineLeft);
-        niveau.fontStyle = FontStyles.Bold;
-        niveau.enableWordWrapping = false;
-        niveau.overflowMode = TextOverflowModes.Overflow;
-
-        var etoiles = Texte("EtoilesActuelles", panneau,
-            "ETOILES " + etat.Etoiles + " / 5", 21, TexteClair,
-            .570f, .620f, .960f, .955f, TextAlignmentOptions.MidlineRight);
-        etoiles.enableWordWrapping = false;
-        etoiles.overflowMode = TextOverflowModes.Overflow;
-
-        string legendeXp = bloque
-            ? "XP BLOQUEE - PROMOTION NECESSAIRE"
-            : "XP  " + etat.Experience.ToString("N0") + " / " + xpSuivante.ToString("N0");
-        var xp = Texte("ExperienceActuelle", panneau, legendeXp, 20, TexteClair,
-            .060f, .330f, .940f, .635f, TextAlignmentOptions.Center);
-        xp.enableWordWrapping = false;
-        xp.overflowMode = TextOverflowModes.Overflow;
-        xp.enableAutoSizing = true;
-        xp.fontSizeMin = 15;
-        xp.fontSizeMax = 20;
-
-        // Fond et remplissage independants du texte ; barre toujours dans le panneau.
-        var fondJauge = Zone("FondJaugeXP", panneau, .060f, .155f, .940f, .265f);
-        var fondImage = ImageUI(fondJauge, new Color(.075f, .110f, .185f, 1f));
-        fondImage.raycastTarget = false;
-        if (remplissage > 0f)
+        // 5 étoiles sous forme d'images : pas de glyphes Unicode manquants dans TMP.
+        for (int i = 0; i < 5; i++)
         {
-            var progression = Zone("RemplissageXP", fondJauge,
-                0f, 0f, remplissage, 1f);
-            var imageProgression = ImageUI(progression, new Color(.94f, .72f, .33f, 1f));
-            imageProgression.raycastTarget = false;
+            float x = .425f + i * .106f;
+            RectTransform etoile = Zone("Etoile_" + (i + 1), carte,
+                x, .430f, x + .083f, .720f);
+            Image image = ImageUI(etoile, i < etat.Etoiles
+                ? new Color(1f, .91f, .63f, 1f)
+                : new Color(.33f, .42f, .58f, .82f));
+            image.sprite = EtoileMesHerosSprite();
+            image.preserveAspect = true;
         }
+        string texteXP = bloque
+            ? (etat.Etoiles == 5 ? "NIVEAU MAXIMUM ATTEINT" : "PALIER ATTEINT - PROMOTION À VENIR")
+            : "XP  " + etat.Experience.ToString("N0") + " / " + xpMax.ToString("N0");
+        var legende = Texte("XpCourante", carte, texteXP, 20,
+            bloque ? Or : TexteClair, .340f, .258f, .955f, .448f,
+            TextAlignmentOptions.MidlineRight);
+        legende.enableAutoSizing = true;
+        legende.fontSizeMin = 15;
+        legende.fontSizeMax = 20;
+        legende.overflowMode = TextOverflowModes.Truncate;
+
+        RectTransform rail = Zone("RailXP", carte, .055f, .105f, .945f, .200f);
+        ImageUI(rail, new Color(.050f, .115f, .208f, 1f), "bouton_sombre");
+        RectTransform railInterieur = Zone("RailInterieur", rail, .012f, .24f, .988f, .76f);
+        ImageUI(railInterieur, new Color(.16f, .28f, .43f, .88f));
+        if (ratio > .001f)
+        {
+            var remplissage = Zone("XPRemplie", railInterieur, 0f, 0f, ratio, 1f);
+            ImageUI(remplissage, new Color(.27f, .69f, .96f, 1f));
+            var reflet = Zone("RefletXP", remplissage, 0f, .62f, 1f, 1f);
+            ImageUI(reflet, new Color(.75f, .94f, 1f, .65f));
+        }
+    }
+
+    // Texture d'une étoile à cinq branches dessinée en code, une fois pour toutes.
+    private static Sprite etoileMesHeros;
+    private static Sprite EtoileMesHerosSprite()
+    {
+        if (etoileMesHeros != null) return etoileMesHeros;
+        const int taille = 80;
+        Texture2D image = new Texture2D(taille, taille, TextureFormat.RGBA32, false);
+        image.name = "EtoileProgressionUI";
+        image.wrapMode = TextureWrapMode.Clamp;
+        Vector2[] sommets = new Vector2[10];
+        for (int i = 0; i < 10; i++)
+        {
+            float a = Mathf.PI * .5f + i * Mathf.PI / 5f;
+            float r = (i % 2 == 0) ? 34f : 15f;
+            sommets[i] = new Vector2(40f + Mathf.Cos(a) * r, 40f + Mathf.Sin(a) * r);
+        }
+        for (int y = 0; y < taille; y++)
+            for (int x = 0; x < taille; x++)
+            {
+                bool interieur = false;
+                for (int i = 0, j = sommets.Length - 1; i < sommets.Length; j = i++)
+                {
+                    Vector2 a = sommets[i], b = sommets[j];
+                    if ((a.y > y) != (b.y > y) &&
+                        x < (b.x - a.x) * (y - a.y) / (b.y - a.y) + a.x)
+                        interieur = !interieur;
+                }
+                Color c = Color.clear;
+                if (interieur)
+                {
+                    float v = (float)y / (taille - 1);
+                    c = Color.Lerp(new Color(.71f, .37f, .08f, 1f),
+                        new Color(1f, .92f, .48f, 1f), v);
+                }
+                image.SetPixel(x, y, c);
+            }
+        image.Apply();
+        etoileMesHeros = Sprite.Create(image,
+            new Rect(0f, 0f, taille, taille), new Vector2(.5f, .5f), 100f);
+        return etoileMesHeros;
+    }
+
+    private void AfficherReliquesMesHeros(RectTransform parent)
+    {
+        Texte("LegendeReliques", parent, "6 EMPLACEMENTS · À ÉQUIPER", 19, Or,
+            .015f, .923f, .985f, 1f);
+        string[] noms = { "ARME", "BOTTES", "ARMURE", "GANTS", "CASQUE", "AMULETTE" };
+        string[] icones = { "arme", "bottes", "armure", "gants", "casque", "amulette" };
+        for (int i = 0; i < 6; i++)
+        {
+            int pos = i;
+            int col = i % 2;
+            int ligne = i / 2;
+            float gauche = col == 0 ? .005f : .511f;
+            float haut = .911f - ligne * .300f;
+            RectTransform cadre = Zone("Emplacement_" + noms[i], parent,
+                gauche, haut - .274f, gauche + .483f, haut);
+            Image fond = ImageUI(cadre, Color.white, "emplacement_relique", true);
+            Button bouton = cadre.gameObject.AddComponent<Button>();
+            bouton.targetGraphic = fond;
+            bouton.onClick.AddListener(() => Message("Relique " + noms[pos] +
+                " : équipement prévu à l'étape 10."));
+            RectTransform imageSlot = Zone("Pictogramme", cadre, .215f, .275f, .785f, .862f);
+            Image ico = ImageUI(imageSlot, new Color(.77f, .83f, .94f, .88f));
+            ico.sprite = SpriteUI("Icons/" + icones[i]);
+            ico.preserveAspect = true;
+            Texte("Nom", cadre, noms[i], 16, TexteSecondaire,
+                .01f, .020f, .99f, .235f);
+        }
+    }
+
+    private void AfficherCompetencesMesHeros(RectTransform parent, Perso p)
+    {
+        Texte("LegendeCompetences", parent, "COMPÉTENCES DU HÉROS", 19, Or,
+            .01f, .905f, .99f, .995f);
+        for (int i = 0; i < 3; i++)
+        {
+            int position = i;
+            bool active = p.Competences != null && i < p.Competences.Length;
+            string libelle = active ? (i + 1) + ". " + p.Competences[i].Nom : "À DÉBLOQUER";
+            float haut = .875f - i * .285f;
+            Bouton("AccesCompetence" + i, parent, libelle,
+                active ? (Action)(() => {
+                    RetenirDefilement();
+                    indexCompetence = position;
+                    Construire();
+                }) : null,
+                .015f, haut - .239f, .985f, haut,
+                active && indexCompetence == i, 21, active);
+        }
+    }
+
+    private void AfficherInfosMesHeros(RectTransform parent, Perso p)
+    {
+        Texte("TitreFicheRapide", parent, "FICHE RAPIDE", 23, Or,
+            .035f, .889f, .965f, .985f);
+        Texte("TypeEtClasse", parent,
+            "RÔLE\n" + p.Role + "\n\nRARETÉ\n" + p.Rarete,
+            24, TexteClair, .08f, .400f, .92f, .855f);
+        Texte("MeneurRapide", parent,
+            p.Meneur == null ? "MENEUR : AUCUN" : "MENEUR DISPONIBLE",
+            20, p.Meneur == null ? TexteSecondaire : Or,
+            .06f, .230f, .94f, .390f);
+        Bouton("InfosDetaillees", parent, "COMMUNAUTÉ / INFOS",
+            OuvrirInfoPersonnage, .025f, .025f, .975f, .205f, false, 18);
+    }
+
+    private void AfficherRunesMesHeros(RectTransform parent)
+    {
+        Texte("TitreRunes", parent, "RUNES", 28, Or,
+            .06f, .770f, .94f, .980f);
+        Texte("RunesAvenir", parent,
+            "Cet onglet reste réservé à une future mécanique.\n\n" +
+            "Les six Reliques sont accessibles depuis RELIQUES.",
+            21, TexteClair, .08f, .300f, .92f, .755f);
+        Bouton("AccesReliques", parent, "VOIR LES RELIQUES",
+            () => ChangerOnglet(Onglet.Equipements),
+            .06f, .055f, .94f, .215f, false, 20);
     }
 
     // La page d'information est preparee. Les avis et tendances demanderont plus tard
