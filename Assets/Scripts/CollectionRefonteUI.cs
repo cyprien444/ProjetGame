@@ -551,14 +551,35 @@ public class CollectionRefonteUI : MonoBehaviour
             BasculerEncyclopedie, .813f, .110f, .982f, .897f, true, 22);
     }
 
-    // V8.9 : Mes heros avec STATS/XP/promotion dans un seul onglet. Encyclopedie inchangee.
+    // V8.9.2 : toute la fiche Mes heros dans un unique cadre ;
+    // la bande des portraits est independante et identique a la V8.9.1.
+    // STATS/XP/promotion restent dans le meme onglet. Encyclopedie inchangee.
     private void ConstruirePersonnelle()
     {
         List<int> possedes = ListePossedee();
         if (!possedes.Contains(indexSelectionne))
             indexSelectionne = possedes.Count > 0 ? possedes[0] : -1;
 
-        RectTransform haut = Panneau("EnteteMesHerosV87", racine, .025f, .924f, .975f, .994f);
+        // V8.9.2 : un cadre principal pour toute la fiche Mes heros,
+        // y compris le titre, le personnage, les onglets et la description.
+        // Seule la barre defilante du bas conserve son cadre independant.
+        RectTransform blocPrincipal = Panneau("BlocUnique_MesHeros", racine,
+            .025f, .166f, .975f, .992f);
+
+        // Sections sans bordures propres : seuls les boutons gardent leur habillage.
+        RectTransform haut = Zone("EnteteMesHeros", blocPrincipal,
+            .018f, .915f, .982f, .993f);
+
+        // Filets fins pour organiser le contenu sans multiplier les encadrements.
+        RectTransform traitHaut = Zone("FiletSousEntete", blocPrincipal,
+            .040f, .907f, .960f, .909f);
+        ImageUI(traitHaut, new Color(.82f, .67f, .42f, .45f));
+        RectTransform traitVertical = Zone("FiletEntreHeroEtGestion", blocPrincipal,
+            .647f, .270f, .649f, .888f);
+        ImageUI(traitVertical, new Color(.82f, .67f, .42f, .25f));
+        RectTransform traitBas = Zone("FiletDessusDescription", blocPrincipal,
+            .040f, .241f, .960f, .243f);
+        ImageUI(traitBas, new Color(.82f, .67f, .42f, .45f));
         Bouton("RetourAuMenu", haut, "RETOUR",
             () => SceneManager.LoadScene("Menu"), .015f, .145f, .246f, .870f, false, 25);
         Texte("TitreMesHeros", haut, "MES HÉROS", 46, Or,
@@ -571,7 +592,7 @@ public class CollectionRefonteUI : MonoBehaviour
         BandeMesHerosEnBas(racine);
         if (indexSelectionne < 0)
         {
-            var sansHero = Panneau("AucunHeroPossede", racine, .04f, .280f, .96f, .890f);
+            var sansHero = Zone("AucunHeroPossede", blocPrincipal, .04f, .280f, .96f, .890f);
             Texte("MessageAucunHero", sansHero,
                 "Aucun héros possédé.\n\nDécouvre les personnages dans l'Encyclopédie.",
                 37, TexteClair, .09f, .27f, .91f, .74f);
@@ -581,50 +602,65 @@ public class CollectionRefonteUI : MonoBehaviour
         Perso perso = Donnees.Persos[indexSelectionne];
         EtatProgressionHero progression = ProgressionHeros.Lire(indexSelectionne);
 
-        // Bandeau identitaire : personnage, classe et rareté.
-        RectTransform identite = Panneau("IdentiteDuHero", racine, .025f, .846f, .975f, .918f);
-        RectTransform vignette = Zone("PortraitIdentite", identite, .016f, .10f, .152f, .91f);
-        ImageUI(vignette, Color.white, "cadre_portrait");
-        RectTransform photo = Zone("ImageIdentite", vignette, .09f, .09f, .91f, .91f);
-        Image imgPhoto = ImageUI(photo, Color.white);
-        imgPhoto.sprite = Portrait(indexSelectionne);
-        imgPhoto.preserveAspect = true;
-        Texte("NomSelectionne", identite, perso.Nom, 42, Or,
-            .172f, .46f, .865f, .94f, TextAlignmentOptions.MidlineLeft);
-        Texte("RoleEtRarete", identite, perso.Role + "  ·  " + perso.Rarete, 25, TexteClair,
-            .172f, .12f, .865f, .50f, TextAlignmentOptions.MidlineLeft);
-        Texte("CollectionTag", identite, "POSSÉDÉ", 18, Or,
-            .798f, .15f, .960f, .45f, TextAlignmentOptions.MidlineRight);
+        // Presentation du personnage sans sous-cadre.
+        // Conservation de la ligne Niveau · Nom · Etoiles de la V8.9.1.
+        RectTransform sceneHeros = Zone("PresentationDuHero", blocPrincipal,
+            .030f, .255f, .636f, .897f);
 
-        // Illustration mise en avant : on réutilise l'art du héros, sans le modifier.
-        RectTransform sceneHeros = Panneau("PresentationDuHero", racine, .025f, .270f, .658f, .839f);
-        RectTransform art = Zone("IllustrationCentrale", sceneHeros, .055f, .255f, .945f, .962f);
+        // Grande illustration d'origine ; aucune modification des sprites.
+        RectTransform art = Zone("IllustrationCentrale", sceneHeros,
+            .065f, .200f, .935f, .860f);
         Image dessin = ImageUI(art, Color.white);
         dessin.sprite = SpriteUI("HeroArt/" + indexSelectionne);
         if (dessin.sprite == null) dessin.sprite = Portrait(indexSelectionne);
         dessin.preserveAspect = true;
         dessin.raycastTarget = false;
+
         Bouton("VoirLesInformations", sceneHeros, "INFOS",
-            OuvrirInfoPersonnage, .055f, .872f, .350f, .974f, true, 26);
-        // V8.9 : identite visible juste sous le personnage, sans jauge d'XP.
-        // La progression detaillee est uniquement dans l'onglet STATS.
-        Texte("NomSousIllustration", sceneHeros,
-            "Lv. " + progression.Niveau + "  ·  " + perso.Nom, 34, Or,
-            .09f, .155f, .91f, .235f);
-        for (int i = 0; i < 5; i++)
+            OuvrirInfoPersonnage, .055f, .870f, .350f, .970f, true, 26);
+
+        // Exemple de rendu pour un heros niveau 12 avec 2 etoiles :
+        // 12  ·  Garrick  ·  [etoile][etoile]
+        // Les valeurs viennent toujours de ProgressionHeros.Lire().
+        RectTransform identiteCompacte = Zone("IdentiteCompacteSousIllustration",
+            sceneHeros, .06f, .070f, .94f, .185f);
+        // Pas de rectangle supplementaire derriere l'identite.
+
+        int nombreEtoiles = Mathf.Clamp(progression.Etoiles, 1, 5);
+        const float largeurUneEtoile = .055f;
+        const float espacement = .010f;
+        float largeurTexte = Mathf.Clamp(.31f + perso.Nom.Length * .023f,
+            .43f, .615f);
+        float largeurGroupe = largeurTexte + .015f +
+            nombreEtoiles * largeurUneEtoile +
+            (nombreEtoiles - 1) * espacement;
+        float depart = (1f - largeurGroupe) * .5f;
+
+        TMP_Text ligneIdentite = Texte("NiveauNomEtSeparateur",
+            identiteCompacte,
+            progression.Niveau + "  ·  " + perso.Nom + "  ·", 30, Or,
+            depart, .07f, depart + largeurTexte, .93f,
+            TextAlignmentOptions.MidlineRight);
+        ligneIdentite.enableAutoSizing = true;
+        ligneIdentite.fontSizeMin = 19f;
+        ligneIdentite.fontSizeMax = 30f;
+        ligneIdentite.enableWordWrapping = false;
+        ligneIdentite.overflowMode = TextOverflowModes.Truncate;
+
+        float departEtoiles = depart + largeurTexte + .015f;
+        for (int i = 0; i < nombreEtoiles; i++)
         {
-            float x = .285f + i * .091f;
-            RectTransform etoile = Zone("EtoileSousHero_" + (i + 1), sceneHeros,
-                x, .067f, x + .071f, .147f);
-            Image image = ImageUI(etoile, i < progression.Etoiles
-                ? new Color(1f, .91f, .63f, 1f)
-                : new Color(.32f, .40f, .55f, .78f));
+            float x = departEtoiles + i * (largeurUneEtoile + espacement);
+            RectTransform etoile = Zone("EtoileActiveSousHero_" + (i + 1),
+                identiteCompacte, x, .20f, x + largeurUneEtoile, .80f);
+            Image image = ImageUI(etoile, new Color(1f, .91f, .63f, 1f));
             image.sprite = EtoileMesHerosSprite();
             image.preserveAspect = true;
         }
 
         // Colonne de gestion : quatre onglets actifs et les six reliques à venir.
-        RectTransform gestion = Panneau("GestionDuHero", racine, .670f, .270f, .975f, .839f);
+        RectTransform gestion = Zone("GestionDuHero", blocPrincipal,
+            .664f, .255f, .975f, .897f);
         Texte("TitreGestion", gestion, "GESTION", 27, Or,
             .04f, .925f, .96f, .990f);
         Bouton("OngletReliques", gestion, "RELIQUES",
@@ -652,7 +688,8 @@ public class CollectionRefonteUI : MonoBehaviour
         // V8.9 : plus aucun panneau de progression ou de stats en dehors de STATS.
         // Les descriptions de competence restent en bas de page.
 
-        RectTransform details = Panneau("DetailsCompetenceMesHeros", racine, .025f, .168f, .975f, .260f);
+        RectTransform details = Zone("DetailsCompetenceMesHeros", blocPrincipal,
+            .040f, .026f, .960f, .227f);
         int total = perso.Competences == null ? 0 : perso.Competences.Length;
         if (total > 0)
         {
