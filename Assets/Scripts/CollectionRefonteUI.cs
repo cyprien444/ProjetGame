@@ -462,7 +462,7 @@ public class CollectionRefonteUI : MonoBehaviour
         if (racine != null) Destroy(racine.gameObject);
         racine = Zone("CollectionRefonte_Generee", transform, 0f, 0f, 1f, 1f);
         ImageUI(racine, Color.white, "fond_codex");
-        if (mode == Mode.Personnelle) ConstruirePersonnelle();
+        if (mode == Mode.Personnelle) V10ConstruirePersonnelle();
         else if (mode == Mode.Galerie) ConstruireGalerie();
         else if (mode == Mode.InfoPersonnage) ConstruireInfoPersonnage();
         else ConstruireFicheEncyclopedie();
@@ -919,6 +919,286 @@ public class CollectionRefonteUI : MonoBehaviour
         V9Texte("AucunSet", bas,
             "Aucun set actif · Les runes seront ajoutées plus tard.",
             22, TexteSecondaire, .055f, .170f, .945f, .680f);
+    }
+
+
+    // ------------------------------------------------------------------------
+    // V9.1 - ÉCRAN MES HÉROS : 6 ÉQUIPEMENTS / PERSONNAGE 3D FIXE / STATS
+    // Le visuel central utilise la même RenderTexture que l'Encyclopédie.
+    // Le composant déjà installé « ApercuPersonnage3DFixe » trouve le
+    // RectTransform "EmplacementModele3D" directement sous la racine.
+    // Aucun changement dans les méthodes Encyclopédie ni la progression.
+    // ------------------------------------------------------------------------
+    private static readonly string V10Ressources = "CollectionUI/MesHerosV91/";
+
+    private RawImage V10Image(string nom, Transform parent, string fichier,
+        float x1, float y1, float x2, float y2)
+    {
+        return V9Image(nom, parent, V10Ressources + fichier, x1, y1, x2, y2);
+    }
+
+    private Button V10Bouton(string nom, Transform parent, string titre, Action action,
+        float x1, float y1, float x2, float y2, bool selectionne = false, bool disponible = true,
+        int taille = 27)
+    {
+        var zone = Zone(nom, parent, x1, y1, x2, y2);
+        RawImage image = V10Image("Fond", zone,
+            selectionne ? "bouton_actif" : "bouton_sombre", 0f, 0f, 1f, 1f);
+        image.raycastTarget = true;
+        Button bouton = zone.gameObject.AddComponent<Button>();
+        bouton.targetGraphic = image;
+        bouton.interactable = disponible;
+        var couleurs = bouton.colors;
+        couleurs.highlightedColor = new Color(1f, .93f, .75f, 1f);
+        couleurs.pressedColor = new Color(.72f, .87f, 1f, 1f);
+        couleurs.disabledColor = new Color(.47f, .53f, .60f, 1f);
+        bouton.colors = couleurs;
+        if (action != null) bouton.onClick.AddListener(() => action());
+        V9Texte("Libelle", zone, titre, taille,
+            selectionne ? new Color(1f, .90f, .59f) : TexteClair,
+            .05f, .13f, .95f, .89f);
+        return bouton;
+    }
+
+    private void V10FooterHeros()
+    {
+        // Portraits navigables et toujours défilants ; noms masqués.
+        List<int> indices = ListePossedee();
+        RectTransform bande = V9Panneau("BandeHerosV91", racine,
+            .020f, .022f, .980f, .165f, new Color(.017f, .059f, .110f, .98f), true);
+        V9Trait(bande, "AccentHaut", .035f, .970f, .97f, .981f, Or);
+
+        RectTransform zoneScroll = Zone("DefilementDesHeros", bande,
+            .018f, .085f, .685f, .922f);
+        ScrollRect scroll = zoneScroll.gameObject.AddComponent<ScrollRect>();
+        scroll.horizontal = true;
+        scroll.vertical = false;
+        scroll.scrollSensitivity = 45f;
+        scroll.movementType = ScrollRect.MovementType.Clamped;
+        RectTransform viewport = Zone("FenetreDesPortraits", zoneScroll, 0f, 0f, 1f, 1f);
+        ImageUI(viewport, new Color(.03f, .06f, .13f, .08f), null, true);
+        viewport.gameObject.AddComponent<RectMask2D>();
+        RectTransform contenu = Zone("PortraitsPossedes", viewport, 0f, 0f, 0f, 1f);
+        contenu.pivot = new Vector2(0f, .5f);
+        const float largeur = 181f;
+        const float ecart = 15f;
+        contenu.sizeDelta = new Vector2(Mathf.Max(1, indices.Count) * (largeur + ecart) + 24f, 0f);
+        HorizontalLayoutGroup disposition = contenu.gameObject.AddComponent<HorizontalLayoutGroup>();
+        disposition.childAlignment = TextAnchor.MiddleLeft;
+        disposition.childControlWidth = false;
+        disposition.childControlHeight = false;
+        disposition.childForceExpandWidth = false;
+        disposition.childForceExpandHeight = false;
+        disposition.spacing = ecart;
+        disposition.padding = new RectOffset(10, 10, 0, 0);
+        foreach (int i in indices)
+        {
+            var carte = Zone("Hero_" + i, contenu, 0f, 0f, 0f, 0f);
+            carte.sizeDelta = new Vector2(largeur, largeur);
+            DessinerPortrait(carte, i, i == indexSelectionne, false);
+        }
+        scroll.content = contenu;
+        scroll.viewport = viewport;
+        listePortraits = scroll;
+        Canvas.ForceUpdateCanvases();
+        scroll.horizontalNormalizedPosition = positionHorizontaleMesHeros;
+
+        // Le bouton Encyclopédie reste hors de la zone de défilement.
+        RectTransform boutonLivre = Zone("BoutonEncyclopedie", bande,
+            .710f, .125f, .987f, .907f);
+        RawImage fond = V10Image("FondDore", boutonLivre, "bouton_actif",
+            0f, 0f, 1f, 1f);
+        fond.raycastTarget = true;
+        Button bouton = boutonLivre.gameObject.AddComponent<Button>();
+        bouton.targetGraphic = fond;
+        bouton.onClick.AddListener(BasculerEncyclopedie);
+        V10Image("Livre", boutonLivre, "livre", .03f, .19f, .22f, .82f);
+        V9Texte("Texte", boutonLivre, "ENCYCLOPÉDIE", 26, Or,
+            .235f, .21f, .975f, .82f);
+    }
+
+    private void V10ConstruirePersonnelle()
+    {
+        List<int> possedes = ListePossedee();
+        if (!possedes.Contains(indexSelectionne))
+            indexSelectionne = possedes.Count > 0 ? possedes[0] : -1;
+
+        RectTransform cadre = V9Panneau("HerosInterfaceV91", racine,
+            .019f, .171f, .981f, .995f, new Color(.017f, .047f, .091f, 1f), true);
+        string fond = onglet == Onglet.Runes ? "fond_runes" :
+                      onglet == Onglet.Competences ? "fond_talent" : "fond_attribut";
+        V9Image("FondDecoratif", cadre, "CollectionUI/MesHerosV9/" + fond,
+            .019f, .130f, .981f, .947f, new Color(1f, 1f, 1f, .72f));
+        // Quelques détails très fins pour rester dans la DA bleu nuit et or.
+        V9Trait(cadre, "TraitSousEntete", .020f, .936f, .980f, .939f, Or);
+        V9Trait(cadre, "LueurCadre", .023f, .933f, .977f, .936f,
+            new Color(.20f, .66f, .93f, .28f));
+
+        RectTransform entete = Zone("BarreNavigation", cadre, .021f, .945f, .979f, .995f);
+        V10Bouton("Retour", entete, "‹  RETOUR", () => SceneManager.LoadScene("Menu"),
+            .0f, .01f, .253f, .99f, false, true, 27);
+        V9Texte("Titre", entete, "HÉROS", 43, Or,
+            .27f, .02f, .73f, .96f);
+        V10Bouton("Equipe", entete, "ÉQUIPE", () => SceneManager.LoadScene("Equipe"),
+            .747f, .01f, 1f, .99f, false, true, 27);
+
+        V10FooterHeros();
+        if (indexSelectionne < 0)
+        {
+            V9Texte("Vide", cadre, "Aucun héros possédé. Consulte l'Encyclopédie.",
+                32, TexteClair, .09f, .42f, .91f, .57f);
+            return;
+        }
+
+        Perso perso = Donnees.Persos[indexSelectionne];
+        EtatProgressionHero etat = ProgressionHeros.Lire(indexSelectionne);
+        if (etat == null)
+        {
+            V9Texte("Erreur", cadre, "Progression du héros indisponible.",
+                28, TexteClair, .10f, .42f, .90f, .57f);
+            return;
+        }
+
+        // Bandeau du héros : niveau, nom, étoiles acquises, rôle et rareté.
+        RectTransform identite = Zone("IdentiteDuHero", cadre,
+            .042f, .850f, .958f, .933f);
+        RectTransform embleme = V9Panneau("Embleme", identite,
+            .004f, .12f, .112f, .92f, new Color(.125f, .105f, .28f, .91f), true);
+        var petit = Zone("Symbole", embleme, .16f, .14f, .84f, .87f);
+        Image symbole = ImageUI(petit, Or);
+        symbole.sprite = SpriteUI("Icons/amulette");
+        symbole.preserveAspect = true;
+        V9Texte("Nom", identite, perso.Nom, 48, TexteClair,
+            .136f, .505f, .680f, .982f, TextAlignmentOptions.MidlineLeft);
+        V9Etoiles(identite, etat.Etoiles, .136f, .040f, .440f, .490f);
+        V9Texte("Role", identite, perso.Role.ToUpperInvariant(), 24, TexteSecondaire,
+            .477f, .12f, .731f, .50f);
+        V9Texte("Rarete", identite, perso.Rarete, 24, Or,
+            .735f, .12f, .986f, .50f, TextAlignmentOptions.MidlineRight);
+
+        // 3 onglets seulement ; PAS d'onglet Artefact et PAS de bloc vide dessous.
+        RectTransform tabs = Zone("Onglets", cadre, .032f, .035f, .968f, .107f);
+        V10Bouton("Attribut", tabs, "ATTRIBUT",
+            () => ChangerOnglet(Onglet.Infos), .000f, .015f, .326f, .985f,
+            onglet != Onglet.Competences && onglet != Onglet.Runes, true, 29);
+        V10Bouton("Talent", tabs, "TALENT",
+            () => ChangerOnglet(Onglet.Competences), .337f, .015f, .663f, .985f,
+            onglet == Onglet.Competences, true, 29);
+        V10Bouton("Runes", tabs, "RUNES",
+            () => ChangerOnglet(Onglet.Runes), .674f, .015f, 1f, .985f,
+            onglet == Onglet.Runes, true, 29);
+
+        RectTransform contenu = Zone("ContenuOnglet", cadre,
+            .030f, .125f, .970f, .839f);
+        if (onglet == Onglet.Competences)
+            V9PageTalent(contenu, perso); // Compétences réelles de persos.json
+        else if (onglet == Onglet.Runes)
+            V9PageRunes(contenu);
+        else
+            V10PageAttribut(contenu, perso, etat);
+
+        // L'info-bulle reste non intrusive et n'ajoute aucun sous-cadre.
+        texteInfo = V9Texte("MessageEquipement", cadre, "", 20,
+            TexteSecondaire, .062f, .112f, .938f, .140f);
+        if (afficherApercuPromotionMesHeros)
+            AfficherApercuPromotionMesHeros(perso, etat);
+    }
+
+    private void V10Equipement(RectTransform page, string nom, string image, int numero)
+    {
+        float haut = .915f - numero * .130f;
+        RectTransform caseEquipement = Zone("Equipement_" + nom, page,
+            .014f, haut - .112f, .172f, haut);
+        RawImage cadre = V10Image("Cadre", caseEquipement, "cadre_equipement",
+            0f, 0f, 1f, 1f);
+        cadre.raycastTarget = true;
+        var bouton = caseEquipement.gameObject.AddComponent<Button>();
+        bouton.targetGraphic = cadre;
+        bouton.onClick.AddListener(() => Message(nom +
+            " : emplacement prévu pour le système d'équipements (étape 10)."));
+        V10Image("Pictogramme", caseEquipement, "equip_" + image,
+            .17f, .17f, .83f, .83f);
+    }
+
+    private void V10PageAttribut(RectTransform page, Perso perso, EtatProgressionHero etat)
+    {
+        // Six emplacements comme sur la maquette. Icônes seulement : aucun objet fictif.
+        string[] noms = { "ARME", "CASQUE", "PLASTRON", "GANTS", "BOTTES", "BOUCLIER" };
+        string[] images = { "epee", "casque", "plastron", "gants", "bottes", "bouclier" };
+        for (int i = 0; i < noms.Length; i++)
+            V10Equipement(page, noms[i], images[i], i);
+
+        // Socle décoratif, indépendant du modèle et de sa caméra.
+        V10Image("Plateforme", page, "socle", .200f, .260f, .790f, .350f);
+
+        // Statistiques dynamiques (PV/ATQ/DEF plafonnées à x3 au niveau 100).
+        RectTransform stats = V9Panneau("Statistiques", page,
+            .772f, .345f, .990f, .774f,
+            new Color(.014f, .065f, .124f, .93f), true);
+        V9Texte("TitreStats", stats, "STATS", 30, Or,
+            .08f, .895f, .92f, .980f);
+        V9Trait(stats, "SousTitre", .10f, .881f, .90f, .886f, V9OrSombre);
+        string[] nomsStats = { "PV", "ATQ", "DEF", "SPD", "CRIT" };
+        float multiplicateur = ProgressionHeros.CoefficientStats(etat.Niveau);
+        string[] valeurs = {
+            Mathf.RoundToInt(Stat(perso, 0) * multiplicateur).ToString("N0"),
+            Mathf.RoundToInt(Stat(perso, 1) * multiplicateur).ToString("N0"),
+            Mathf.RoundToInt(Stat(perso, 2) * multiplicateur).ToString("N0"),
+            perso.Spd.ToString(), perso.Crit + " %"
+        };
+        for (int i = 0; i < 5; i++)
+        {
+            float haut = .853f - i * .160f;
+            V9Texte("Nom_" + i, stats, nomsStats[i], 24, Or,
+                .080f, haut - .118f, .475f, haut, TextAlignmentOptions.MidlineLeft);
+            V9Texte("Valeur_" + i, stats, valeurs[i], 24, TexteClair,
+                .44f, haut - .118f, .917f, haut, TextAlignmentOptions.MidlineRight);
+            if (i < 4)
+                V9Trait(stats, "Separateur_" + i,
+                    .09f, haut - .133f, .91f, haut - .128f,
+                    new Color(.66f, .51f, .29f, .52f));
+        }
+
+        // Niveau, barre XP et promotion juste sous la zone du personnage.
+        V9Texte("Niveau", page, "NIV. " + etat.Niveau, 40, Or,
+            .235f, .213f, .752f, .294f);
+        int plafond = ProgressionHeros.PlafondNiveau(etat.Etoiles);
+        bool palier = etat.Niveau >= plafond;
+        int xpMax = palier ? 0 : ProgressionHeros.XpPourNiveauSuivant(etat.Niveau);
+        float ratio = xpMax <= 0 ? 1f : Mathf.Clamp01((float)etat.Experience / xpMax);
+        RectTransform barre = V9Panneau("BarreExperience", page,
+            .237f, .137f, .762f, .204f,
+            new Color(.015f, .038f, .077f, .97f), true);
+        if (ratio > .001f)
+        {
+            RectTransform remplissage = Zone("ExperienceRemplie", barre,
+                .015f, .15f, .015f + .97f * ratio, .85f);
+            ImageUI(remplissage, new Color(.14f, .70f, .94f, .91f));
+            V9Trait(remplissage, "RefletXP", 0f, .79f, 1f, 1f,
+                new Color(.68f, .99f, 1f, .65f));
+        }
+        V9Texte("NombreXP", barre,
+            palier ? "PALIER ATTEINT" :
+            etat.Experience.ToString("N0") + " / " + xpMax.ToString("N0") + " XP",
+            24, TexteClair, .05f, .15f, .95f, .87f);
+        V10Bouton("BoutonNiveauSup", page, "NIVEAU SUP",
+            () => Message("L'XP sera gagnée pendant les combats lors d'une prochaine étape."),
+            .172f, .018f, .489f, .111f, false, true, 27);
+        V10Bouton("BoutonPromotion", page, "PROMOTION",
+            () => { afficherApercuPromotionMesHeros = true; Construire(); },
+            .510f, .018f, .828f, .111f, true, etat.Etoiles < 5, 27);
+
+        // Même RenderTexture 3D que la fiche Encyclopédie (déjà installée),
+        // mais nouvel emplacement direct sous CollectionRefonte_Generee.
+        // Ainsi le modèle fixe remplace immédiatement l'illustration 2D.
+        RectTransform modele = Zone("EmplacementModele3D", racine,
+            .190f, .412f, .760f, .845f);
+        RectTransform image2D = Zone("HeroIllustration2D", modele, 0f, 0f, 1f, 1f);
+        Image art = ImageUI(image2D, Color.white);
+        art.sprite = SpriteUI("HeroArt/" + indexSelectionne);
+        if (art.sprite == null) art.sprite = Portrait(indexSelectionne);
+        art.preserveAspect = true;
+        art.raycastTarget = false;
     }
 
     // Etape 8.8 : consultation des conditions de promotion, SANS achat ni mutation de sauvegarde.
