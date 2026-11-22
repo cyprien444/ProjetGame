@@ -1068,13 +1068,16 @@ public class CollectionRefonteUI : MonoBehaviour
         Image symbole = ImageUI(petit, Or);
         symbole.sprite = SpriteUI("Icons/amulette");
         symbole.preserveAspect = true;
-        V9Texte("Nom", identite, perso.Nom, 48, TexteClair,
-            .136f, .505f, .680f, .982f, TextAlignmentOptions.MidlineLeft);
-        V9Etoiles(identite, etat.Etoiles, .136f, .040f, .440f, .490f);
+        // V9.2 : rôle discret à gauche ; vrai nom bien visible au CENTRE.
+        // Les étoiles suivent le nom plutôt que le rôle.
         V9Texte("Role", identite, perso.Role.ToUpperInvariant(), 24, TexteSecondaire,
-            .477f, .12f, .731f, .50f);
+            .136f, .15f, .365f, .54f, TextAlignmentOptions.MidlineLeft);
+        TMP_Text titreHero = V9Texte("Nom", identite, perso.Nom, 48, TexteClair,
+            .345f, .515f, .795f, .995f);
+        titreHero.fontSizeMin = 21f; // Longs noms : s'adaptent sans toucher à la rareté.
+        V92EtoilesSousNom(identite, etat.Etoiles);
         V9Texte("Rarete", identite, perso.Rarete, 24, Or,
-            .735f, .12f, .986f, .50f, TextAlignmentOptions.MidlineRight);
+            .795f, .15f, .986f, .54f, TextAlignmentOptions.MidlineRight);
 
         // 3 onglets seulement ; PAS d'onglet Artefact et PAS de bloc vide dessous.
         RectTransform tabs = Zone("Onglets", cadre, .032f, .035f, .968f, .107f);
@@ -1104,12 +1107,37 @@ public class CollectionRefonteUI : MonoBehaviour
             AfficherApercuPromotionMesHeros(perso, etat);
     }
 
+    // V9.2 : étoiles acquises seulement, centrées juste sous le nom.
+    private void V92EtoilesSousNom(RectTransform parent, int nombre)
+    {
+        int n = Mathf.Clamp(nombre, 1, 5);
+        RectTransform zone = Zone("EtoilesSousLeNom", parent,
+            .385f, .015f, .765f, .490f);
+        const float largeur = .135f;
+        const float ecart = .018f;
+        float total = n * largeur + (n - 1) * ecart;
+        float depart = .5f - total * .5f;
+        Sprite etoile = EtoileMesHerosSprite();
+        for (int j = 0; j < n; j++)
+        {
+            float x = depart + j * (largeur + ecart);
+            RectTransform rt = Zone("Etoile_" + j, zone,
+                x, .03f, x + largeur, .95f);
+            Image image = ImageUI(rt, new Color(1f, .85f, .44f, 1f));
+            image.sprite = etoile;
+            image.preserveAspect = true;
+            image.raycastTarget = false;
+        }
+    }
+
     private void V10Equipement(RectTransform page, string nom, string image, int numero)
     {
         float haut = .915f - numero * .130f;
         RectTransform caseEquipement = Zone("Equipement_" + nom, page,
             .014f, haut - .112f, .172f, haut);
-        RawImage cadre = V10Image("Cadre", caseEquipement, "cadre_equipement",
+        // Cadre indépendant de l'icône : éclat doré et fond indigo arrondis.
+        // Le clic reste provisoire : aucun équipement réellement possédé n'est inventé.
+        RawImage cadre = V10Image("Cadre", caseEquipement, "cadre_equipement_v92",
             0f, 0f, 1f, 1f);
         cadre.raycastTarget = true;
         var bouton = caseEquipement.gameObject.AddComponent<Button>();
@@ -1117,7 +1145,7 @@ public class CollectionRefonteUI : MonoBehaviour
         bouton.onClick.AddListener(() => Message(nom +
             " : emplacement prévu pour le système d'équipements (étape 10)."));
         V10Image("Pictogramme", caseEquipement, "equip_" + image,
-            .17f, .17f, .83f, .83f);
+            .195f, .195f, .805f, .805f);
     }
 
     private void V10PageAttribut(RectTransform page, Perso perso, EtatProgressionHero etat)
@@ -1131,14 +1159,18 @@ public class CollectionRefonteUI : MonoBehaviour
         // Socle décoratif, indépendant du modèle et de sa caméra.
         V10Image("Plateforme", page, "socle", .200f, .260f, .790f, .350f);
 
-        // Statistiques dynamiques (PV/ATQ/DEF plafonnées à x3 au niveau 100).
-        RectTransform stats = V9Panneau("Statistiques", page,
-            .772f, .345f, .990f, .774f,
-            new Color(.014f, .065f, .124f, .93f), true);
-        V9Texte("TitreStats", stats, "STATS", 30, Or,
-            .08f, .895f, .92f, .980f);
-        V9Trait(stats, "SousTitre", .10f, .881f, .90f, .886f, V9OrSombre);
+        // STATS V9.2 : panneau bleu nuit arrondi, bordure or et icônes dédiées.
+        // Les chiffres sont calculés à partir des VRAIES données de progression.
+        RectTransform stats = Zone("Statistiques", page,
+            .764f, .343f, .991f, .782f);
+        V10Image("PanneauArrondi", stats, "panneau_stats_v92",
+            0f, 0f, 1f, 1f);
+        V9Texte("TitreStats", stats, "STATS", 31, Or,
+            .10f, .886f, .90f, .961f);
+        V9Trait(stats, "LigneSousTitre", .14f, .865f, .86f, .867f,
+            new Color(.95f, .73f, .33f, .55f));
         string[] nomsStats = { "PV", "ATQ", "DEF", "SPD", "CRIT" };
+        string[] iconesStats = { "pv", "atq", "def", "spd", "crit" };
         float multiplicateur = ProgressionHeros.CoefficientStats(etat.Niveau);
         string[] valeurs = {
             Mathf.RoundToInt(Stat(perso, 0) * multiplicateur).ToString("N0"),
@@ -1148,15 +1180,17 @@ public class CollectionRefonteUI : MonoBehaviour
         };
         for (int i = 0; i < 5; i++)
         {
-            float haut = .853f - i * .160f;
+            float haut = .840f - i * .155f;
+            V10Image("IconeStats_" + i, stats, "stat_" + iconesStats[i],
+                .066f, haut - .118f, .218f, haut);
             V9Texte("Nom_" + i, stats, nomsStats[i], 24, Or,
-                .080f, haut - .118f, .475f, haut, TextAlignmentOptions.MidlineLeft);
+                .236f, haut - .113f, .570f, haut, TextAlignmentOptions.MidlineLeft);
             V9Texte("Valeur_" + i, stats, valeurs[i], 24, TexteClair,
-                .44f, haut - .118f, .917f, haut, TextAlignmentOptions.MidlineRight);
+                .525f, haut - .113f, .932f, haut, TextAlignmentOptions.MidlineRight);
             if (i < 4)
                 V9Trait(stats, "Separateur_" + i,
-                    .09f, haut - .133f, .91f, haut - .128f,
-                    new Color(.66f, .51f, .29f, .52f));
+                    .115f, haut - .141f, .895f, haut - .138f,
+                    new Color(.83f, .67f, .39f, .47f));
         }
 
         // Niveau, barre XP et promotion juste sous la zone du personnage.
