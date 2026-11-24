@@ -969,7 +969,7 @@ public class CollectionRefonteUI : MonoBehaviour
         V9Trait(bande, "AccentHaut", .035f, .970f, .97f, .981f, Or);
 
         RectTransform zoneScroll = Zone("DefilementDesHeros", bande,
-            .018f, .085f, .685f, .922f);
+            .018f, .085f, .805f, .922f);
         ScrollRect scroll = zoneScroll.gameObject.AddComponent<ScrollRect>();
         scroll.horizontal = true;
         scroll.vertical = false;
@@ -1005,16 +1005,15 @@ public class CollectionRefonteUI : MonoBehaviour
 
         // Le bouton Encyclopédie reste hors de la zone de défilement.
         RectTransform boutonLivre = Zone("BoutonEncyclopedie", bande,
-            .710f, .125f, .987f, .907f);
+            .829f, .125f, .979f, .907f);
         RawImage fond = V10Image("FondDore", boutonLivre, "bouton_actif",
             0f, 0f, 1f, 1f);
         fond.raycastTarget = true;
         Button bouton = boutonLivre.gameObject.AddComponent<Button>();
         bouton.targetGraphic = fond;
         bouton.onClick.AddListener(BasculerEncyclopedie);
-        V10Image("Livre", boutonLivre, "livre", .03f, .19f, .22f, .82f);
-        V9Texte("Texte", boutonLivre, "ENCYCLOPÉDIE", 26, Or,
-            .235f, .21f, .975f, .82f);
+        // Icone seule, centree ; le bouton conserve le clic vers l'Encyclopedie.
+        V10Image("Livre", boutonLivre, "livre", .23f, .15f, .77f, .85f);
     }
 
     private void V10ConstruirePersonnelle()
@@ -1059,25 +1058,19 @@ public class CollectionRefonteUI : MonoBehaviour
             return;
         }
 
-        // Bandeau du héros : niveau, nom, étoiles acquises, rôle et rareté.
+        // Identite epuree : rarete au-dessus du role a gauche,
+        // nom au centre et etoiles acquises a droite. L'anneau decoratif
+        // a ete retire : il n'avait aucune fonction dans le jeu.
         RectTransform identite = Zone("IdentiteDuHero", cadre,
             .042f, .850f, .958f, .933f);
-        RectTransform embleme = V9Panneau("Embleme", identite,
-            .004f, .12f, .112f, .92f, new Color(.125f, .105f, .28f, .91f), true);
-        var petit = Zone("Symbole", embleme, .16f, .14f, .84f, .87f);
-        Image symbole = ImageUI(petit, Or);
-        symbole.sprite = SpriteUI("Icons/amulette");
-        symbole.preserveAspect = true;
-        // V9.2 : rôle discret à gauche ; vrai nom bien visible au CENTRE.
-        // Les étoiles suivent le nom plutôt que le rôle.
+        V9Texte("Rarete", identite, perso.Rarete, 27, Or,
+            .032f, .530f, .278f, .930f, TextAlignmentOptions.MidlineLeft);
         V9Texte("Role", identite, perso.Role.ToUpperInvariant(), 24, TexteSecondaire,
-            .136f, .15f, .365f, .54f, TextAlignmentOptions.MidlineLeft);
+            .032f, .100f, .278f, .490f, TextAlignmentOptions.MidlineLeft);
         TMP_Text titreHero = V9Texte("Nom", identite, perso.Nom, 48, TexteClair,
-            .345f, .515f, .795f, .995f);
-        titreHero.fontSizeMin = 21f; // Longs noms : s'adaptent sans toucher à la rareté.
-        V92EtoilesSousNom(identite, etat.Etoiles);
-        V9Texte("Rarete", identite, perso.Rarete, 24, Or,
-            .795f, .15f, .986f, .54f, TextAlignmentOptions.MidlineRight);
+            .292f, .230f, .714f, .830f, TextAlignmentOptions.Center);
+        titreHero.fontSizeMin = 21f;
+        V93EtoilesDroiteDuNom(identite, etat.Etoiles);
 
         // 3 onglets seulement ; PAS d'onglet Artefact et PAS de bloc vide dessous.
         RectTransform tabs = Zone("Onglets", cadre, .032f, .035f, .968f, .107f);
@@ -1107,22 +1100,21 @@ public class CollectionRefonteUI : MonoBehaviour
             AfficherApercuPromotionMesHeros(perso, etat);
     }
 
-    // V9.2 : étoiles acquises seulement, centrées juste sous le nom.
-    private void V92EtoilesSousNom(RectTransform parent, int nombre)
+    // V9.3 : seulement les etoiles obtenues, a droite du nom.
+    // Meme espacement pour 1 a 5 etoiles ; aucune etoile grise.
+    private void V93EtoilesDroiteDuNom(RectTransform parent, int nombre)
     {
         int n = Mathf.Clamp(nombre, 1, 5);
-        RectTransform zone = Zone("EtoilesSousLeNom", parent,
-            .385f, .015f, .765f, .490f);
-        const float largeur = .135f;
-        const float ecart = .018f;
-        float total = n * largeur + (n - 1) * ecart;
-        float depart = .5f - total * .5f;
+        RectTransform zone = Zone("EtoilesADroite", parent,
+            .716f, .245f, .978f, .805f);
+        const float largeur = .183f;
+        const float ecart = .008f;
         Sprite etoile = EtoileMesHerosSprite();
         for (int j = 0; j < n; j++)
         {
-            float x = depart + j * (largeur + ecart);
+            float x = j * (largeur + ecart);
             RectTransform rt = Zone("Etoile_" + j, zone,
-                x, .03f, x + largeur, .95f);
+                x, .08f, x + largeur, .92f);
             Image image = ImageUI(rt, new Color(1f, .85f, .44f, 1f));
             image.sprite = etoile;
             image.preserveAspect = true;
@@ -1170,7 +1162,6 @@ public class CollectionRefonteUI : MonoBehaviour
         V9Trait(stats, "LigneSousTitre", .14f, .865f, .86f, .867f,
             new Color(.95f, .73f, .33f, .55f));
         string[] nomsStats = { "PV", "ATQ", "DEF", "SPD", "CRIT" };
-        string[] iconesStats = { "pv", "atq", "def", "spd", "crit" };
         float multiplicateur = ProgressionHeros.CoefficientStats(etat.Niveau);
         string[] valeurs = {
             Mathf.RoundToInt(Stat(perso, 0) * multiplicateur).ToString("N0"),
@@ -1181,12 +1172,11 @@ public class CollectionRefonteUI : MonoBehaviour
         for (int i = 0; i < 5; i++)
         {
             float haut = .840f - i * .155f;
-            V10Image("IconeStats_" + i, stats, "stat_" + iconesStats[i],
-                .066f, haut - .118f, .218f, haut);
+            // Chiffres et legendes seulement : pas d'icones dans les stats.
             V9Texte("Nom_" + i, stats, nomsStats[i], 24, Or,
-                .236f, haut - .113f, .570f, haut, TextAlignmentOptions.MidlineLeft);
+                .095f, haut - .113f, .525f, haut, TextAlignmentOptions.MidlineLeft);
             V9Texte("Valeur_" + i, stats, valeurs[i], 24, TexteClair,
-                .525f, haut - .113f, .932f, haut, TextAlignmentOptions.MidlineRight);
+                .520f, haut - .113f, .932f, haut, TextAlignmentOptions.MidlineRight);
             if (i < 4)
                 V9Trait(stats, "Separateur_" + i,
                     .115f, haut - .141f, .895f, haut - .138f,
